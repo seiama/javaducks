@@ -1,0 +1,38 @@
+name: "build"
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["**"]
+  pull_request:
+
+concurrency:
+  cancel-in-progress: true
+  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
+
+env:
+  RUNTIME_VERSION: 17
+
+jobs:
+  build:
+    # Only run on PRs if the source branch is on someone else's repo
+    if: "${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}"
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "windows-latest"]
+    runs-on: "${{ matrix.os }}"
+    steps:
+      - name: "checkout repository"
+        uses: "actions/checkout@v3"
+      - name: "validate gradle wrapper"
+        uses: "gradle/wrapper-validation-action@v1"
+      - name: "setup java ${{ env.RUNTIME_VERSION }}"
+        uses: "actions/setup-java@v3"
+        with:
+          distribution: "zulu"
+          java-version: "${{ env.RUNTIME_VERSION }}"
+      - name: "run gradle build"
+        uses: "gradle/gradle-build-action@v2"
+        with:
+          cache-read-only: "${{ github.ref != 'refs/heads/main' || github.event_name == 'pull_request' }}"
+          arguments: "build"
