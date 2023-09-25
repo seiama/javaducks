@@ -43,7 +43,7 @@ spotless {
 jib {
   to.image = "ghcr.io/seiama/javaducks/javaducks"
   from {
-    image = "eclipse-temurin:${indra.javaVersions().target().get()}-jre"
+    image = "azul/zulu-openjdk-alpine:${indra.javaVersions().target().get()}-jre"
     platforms {
       // We can only build multi-arch images when pushing to a registry, not when building locally
       val requestedTasks = gradle.startParameter.taskNames
