@@ -49,6 +49,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -112,7 +113,7 @@ public class JavadocService {
               HttpRequest.newBuilder()
                 .GET()
                 .uri(version.asset(MAVEN_METADATA))
-                .header("User-Agent", USER_AGENT)
+                .header(HttpHeaders.USER_AGENT, USER_AGENT)
                 .build(),
               HttpResponse.BodyHandlers.ofInputStream()
             );
@@ -152,7 +153,7 @@ public class JavadocService {
             HttpRequest.newBuilder()
               .GET()
               .uri(jar)
-              .header("User-Agent", USER_AGENT)
+              .header(HttpHeaders.USER_AGENT, USER_AGENT)
               .build(),
             HttpResponse.BodyHandlers.ofInputStream()
           );
