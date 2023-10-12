@@ -10,8 +10,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - name: "checkout"
-    uses: "actions/checkout@v4"
   - name: "gradle / validate wrapper"
     uses: "gradle/wrapper-validation-action@v1"
   - name: "java ${{ inputs.java-version }}"
