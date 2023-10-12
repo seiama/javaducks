@@ -1,4 +1,4 @@
-name: "build"
+name: "deploy"
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
           password: "${{ secrets.GITHUB_TOKEN }}"
       - name: "publish"
         id: publish
-        run: "./gradlew jib"
+        run: "./gradlew jib -Djib.console=plain"
   promote:
     needs: "deploy"
     runs-on: "ubuntu-latest"
