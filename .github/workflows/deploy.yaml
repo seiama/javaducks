@@ -43,8 +43,8 @@ jobs:
           password: "${{ secrets.GITHUB_TOKEN }}"
       - name: "tag"
         env:
-          IMAGE_ID: "${{ fromJSON(jobs.deploy.outputs.image-json).imageId }}"
-          IMAGE_NAME: "${{ fromJSON(jobs.deploy.outputs.image-json).image }}"
+          IMAGE_ID: "${{ fromJSON(needs.deploy.outputs.image-json).imageId }}"
+          IMAGE_NAME: "${{ fromJSON(needs.deploy.outputs.image-json).image }}"
           PROMOTED_TAG_NAME: "stable"
         run: |
           docker tag $IMAGE_ID $IMAGE_NAME:$PROMOTED_TAG_NAME
