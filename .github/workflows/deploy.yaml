@@ -1,0 +1,49 @@
+name: "build"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+concurrency:
+  cancel-in-progress: true
+  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
+
+jobs:
+  deploy:
+    runs-on: "ubuntu-latest"
+    outputs:
+      image-json: "${{ steps.publish.outputs.imageJson }}" # output produced from printJibMeta Gradle task
+    steps:
+      - name: "setup environment"
+        uses: "./.github/actions/setup-env/"
+      - name: "check"
+        run: ./gradlew check
+      - name: "login"
+        uses: "docker/login-action@v3"
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "publish"
+        id: publish
+        run: "./gradlew jib"
+  promote:
+    needs: "deploy"
+    runs-on: "ubuntu-latest"
+    environment: "promoted"
+    steps:
+      - name: "login"
+        uses: "docker/login-action@v3"
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "tag"
+        env:
+          IMAGE_ID: "${{ fromJSON(jobs.deploy.outputs.image-json).imageId }}"
+          IMAGE_NAME: "${{ fromJSON(jobs.deploy.outputs.image-json).image }}"
+          PROMOTED_TAG_NAME: "stable"
+        run: |
+          docker tag $IMAGE_ID $IMAGE_NAME:$PROMOTED_TAG_NAME
+          docker push $IMAGE_NAME:$PROMOTED_TAG_NAME

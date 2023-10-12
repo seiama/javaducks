@@ -2,16 +2,13 @@ name: "build"
 
 on:
   push:
-    branches: ["**"]
+    branches-ignore: ["main"]
     tags-ignore: ["**"]
   pull_request:
 
 concurrency:
   cancel-in-progress: true
   group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
-
-env:
-  RUNTIME_VERSION: 17
 
 jobs:
   build:
@@ -22,17 +19,7 @@ jobs:
         os: ["ubuntu-latest", "windows-latest"]
     runs-on: "${{ matrix.os }}"
     steps:
-      - name: "checkout repository"
-        uses: "actions/checkout@v3"
-      - name: "validate gradle wrapper"
-        uses: "gradle/wrapper-validation-action@v1"
-      - name: "setup java ${{ env.RUNTIME_VERSION }}"
-        uses: "actions/setup-java@v3"
-        with:
-          distribution: "zulu"
-          java-version: "${{ env.RUNTIME_VERSION }}"
-      - name: "run gradle build"
-        uses: "gradle/gradle-build-action@v2"
-        with:
-          cache-read-only: "${{ github.ref != 'refs/heads/main' || github.event_name == 'pull_request' }}"
-          arguments: "build"
+      - name: "setup environment"
+        uses: "./.github/actions/setup-env/"
+      - name: "build"
+        run: ./gradlew build

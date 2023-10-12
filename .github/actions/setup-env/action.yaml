@@ -1,0 +1,25 @@
+name: "Setup Environment"
+description: "Set up the appropriate build environment common across jobs"
+
+inputs:
+  java-version:
+    description: "Java runtime version to build with"
+    required: false
+    default: "17"
+
+runs:
+  using: "composite"
+  steps:
+  - name: "checkout"
+    uses: "actions/checkout@v4"
+  - name: "gradle / validate wrapper"
+    uses: "gradle/wrapper-validation-action@v1"
+  - name: "java ${{ inputs.java-version }}"
+    uses: "actions/setup-java@v3"
+    with:
+      distribution: "zulu"
+      java-version: "${{ inputs.java-version }}"
+  - name: "gradle / initialize"
+    uses: "gradle/gradle-build-action@v2"
+    with:
+      cache-read-only: "${{ github.ref != 'refs/heads/main' || github.event_name == 'pull_request' }}"
