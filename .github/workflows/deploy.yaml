@@ -46,5 +46,4 @@ jobs:
           IMAGE_NAME: "${{ fromJSON(needs.deploy.outputs.image-json).image }}"
           PROMOTED_TAG_NAME: "stable"
         run: |
-          docker tag $IMAGE_ID $IMAGE_NAME:$PROMOTED_TAG_NAME
-          docker push $IMAGE_NAME:$PROMOTED_TAG_NAME
+          skopeo copy -a "docker://$IMAGE_NAME@$IMAGE_ID" "docker://$IMAGE_NAME:$PROMOTED_TAG_NAME"
