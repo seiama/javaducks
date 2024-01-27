@@ -4,10 +4,10 @@ indra = "3.1.3"
 
 [plugins]
 
-spotless = { id = "com.diffplug.spotless", version = "6.21.0" }
+spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
 
-springDependencyManagement = { id = "io.spring.dependency-management", version = "1.1.3" }
-springBoot = { id = "org.springframework.boot", version = "3.1.4" }
+springDependencyManagement = { id = "io.spring.dependency-management", version = "1.1.4" }
+springBoot = { id = "org.springframework.boot", version = "3.2.2" }
 
 jib = { id = "com.google.cloud.tools.jib", version = "3.4.0" }
 
@@ -20,7 +20,7 @@ spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-start
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
 
-annotations = "org.jetbrains:annotations:24.0.1"
+annotations = "org.jetbrains:annotations:24.1.0"
 stylecheck = "ca.stellardrift:stylecheck:0.2.1"
 caffeine = "com.github.ben-manes.caffeine:caffeine:3.1.8"
-mavenRepositoryMetadata = "org.apache.maven:maven-repository-metadata:3.9.4"
+mavenRepositoryMetadata = "org.apache.maven:maven-repository-metadata:3.9.6"
