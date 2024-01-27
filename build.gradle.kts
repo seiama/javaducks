@@ -15,6 +15,7 @@ plugins {
   alias(libs.plugins.springDependencyManagement)
   alias(libs.plugins.springBoot)
   alias(libs.plugins.jib)
+  alias(libs.plugins.graalvmNative)
 }
 
 group = "com.seiama"
@@ -42,6 +43,7 @@ spotless {
     indentWithSpaces(2)
     licenseHeaderFile(rootProject.file("license_header.txt"))
     trimTrailingWhitespace()
+    targetExclude("build/generated/**/*.java")
   }
 }
 
@@ -91,6 +93,18 @@ jib {
   }
 }
 
+graalvmNative {
+  binaries {
+    binaries.forEach {
+      it.pgoInstrument = true
+      // for some reason it detects javaducks as a lib and doesn't build an executable...
+      it.sharedLibrary = false
+      // enable during development
+//      it.quickBuild = true
+    }
+  }
+}
+
 dependencies {
   annotationProcessor("org.springframework.boot", "spring-boot-configuration-processor")
   checkstyle(libs.stylecheck)
@@ -128,5 +142,9 @@ tasks {
 
   sequenceOf(jib, jibDockerBuild, jibBuildTar).forEach {
     it.configure { finalizedBy(outputImageId.name) }
+  }
+
+  checkstyleAot {
+    isEnabled = false
   }
 }
