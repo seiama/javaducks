@@ -27,9 +27,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.AppConfiguration;
+import com.seiama.javaducks.util.HashUtil;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -53,6 +53,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class JavadocService {
@@ -150,25 +151,59 @@ public class JavadocService {
           LOGGER.warn("Could not update javadoc for {} {}. Couldn't not create dir. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
           continue;
         }
+        // get hash
+        final URI hashUri = UriComponentsBuilder.fromUri(jar).replacePath(jar.getPath() + ".sha256").build().toUri();
+        final String hash;
         try {
-          final HttpResponse<InputStream> response = this.httpClient.send(
+          final HttpResponse<String> response = this.httpClient.send(
+            HttpRequest.newBuilder()
+              .GET()
+              .uri(hashUri)
+              .header(HttpHeaders.USER_AGENT, USER_AGENT)
+              .build(),
+            HttpResponse.BodyHandlers.ofString()
+          );
+          if (HttpStatusCode.valueOf(response.statusCode()).is2xxSuccessful()) {
+            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Status code: {}", config.name(), version.name(), hashUri, response.statusCode());
+            continue;
+          }
+          hash = response.body();
+        } catch (final IOException | InterruptedException e) {
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), hashUri, e.getClass().getName(), e.getMessage());
+          continue;
+        }
+        // check hash
+        if (Files.isReadable(versionPath)) {
+          try {
+            final String hashOnDisk = HashUtil.sha256(Files.readAllBytes(versionPath));
+            if (hashOnDisk.equals(hash)) {
+              LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
+              continue;
+            }
+          } catch (final IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        // download jar
+        try {
+          final HttpResponse<byte[]> response = this.httpClient.send(
             HttpRequest.newBuilder()
               .GET()
               .uri(jar)
               .header(HttpHeaders.USER_AGENT, USER_AGENT)
               .build(),
-            HttpResponse.BodyHandlers.ofInputStream()
+            HttpResponse.BodyHandlers.ofByteArray()
           );
           if (HttpStatusCode.valueOf(response.statusCode()).is2xxSuccessful()) {
             LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.statusCode());
             continue;
           }
-          try (
-            final InputStream is = response.body();
-            final OutputStream os = Files.newOutputStream(versionPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-          ) {
-            is.transferTo(os);
+          final String downloadedHash = HashUtil.sha256(response.body());
+          if (!downloadedHash.equals(hash)) {
+            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hash, downloadedHash);
+            continue;
           }
+          Files.write(versionPath, response.body(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (final IOException | InterruptedException e) {
           LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
           continue;
