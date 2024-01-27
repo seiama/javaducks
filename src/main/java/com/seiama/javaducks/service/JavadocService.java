@@ -50,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -107,12 +108,13 @@ public class JavadocService {
     for (final AppConfiguration.EndpointConfiguration.Version version : config.versions()) {
       final @Nullable URI jar = switch (version.type()) {
         case SNAPSHOT -> {
+          final URI metaDataUri = version.asset(MAVEN_METADATA);
           final Metadata metadata;
           try {
             final HttpResponse<InputStream> response = this.httpClient.send(
               HttpRequest.newBuilder()
                 .GET()
-                .uri(version.asset(MAVEN_METADATA))
+                .uri(metaDataUri)
                 .header(HttpHeaders.USER_AGENT, USER_AGENT)
                 .build(),
               HttpResponse.BodyHandlers.ofInputStream()
@@ -122,7 +124,7 @@ public class JavadocService {
               metadata = reader.read(is, true);
             }
           } catch (final InterruptedException | IOException | XmlPullParserException e) {
-            LOGGER.info("Could not fetch metadata for {} {}", config.name(), version.name());
+            LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
             yield null;
           }
           final @Nullable Snapshot snapshot = metadata.getVersioning().getSnapshot();
@@ -135,7 +137,7 @@ public class JavadocService {
               snapshot.getBuildNumber()
             ));
           } else {
-            LOGGER.info("Could not find latest version for {} {}", config.name(), version.name());
+            LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
             yield null;
           }
         }
@@ -145,7 +147,7 @@ public class JavadocService {
         try {
           Files.createDirectories(versionPath.getParent());
         } catch (final IOException e) {
-          LOGGER.info("Could not update javadoc for {} {}", config.name(), version.name());
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't not create dir. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
           continue;
         }
         try {
@@ -157,14 +159,18 @@ public class JavadocService {
               .build(),
             HttpResponse.BodyHandlers.ofInputStream()
           );
+          if (HttpStatusCode.valueOf(response.statusCode()).is2xxSuccessful()) {
+            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.statusCode());
+            continue;
+          }
           try (
             final InputStream is = response.body();
-            final OutputStream os = Files.newOutputStream(versionPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+            final OutputStream os = Files.newOutputStream(versionPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
           ) {
             is.transferTo(os);
           }
         } catch (final IOException | InterruptedException e) {
-          LOGGER.info("Could not update javadoc for {} {}", config.name(), version.name());
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
           continue;
         }
         LOGGER.info("Updated javadoc for {} {}", config.name(), version.name());

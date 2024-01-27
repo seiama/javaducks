@@ -85,7 +85,7 @@ public class JavadocController {
     @PathVariable final String version
   ) {
     final String root = "/%s/%s".formatted(project, version);
-    // This warning can be ignored, we want to keep this FS open.
+    //noinspection resource - This warning can be ignored, we want to keep this FS open.
     final @Nullable FileSystem fs = this.service.contentsFor(new JavadocService.Key(project, version));
     if (fs != null) {
       String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
