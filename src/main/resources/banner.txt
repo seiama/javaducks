@@ -1,0 +1,7 @@
+
+${AnsiColor.BRIGHT_YELLOW}              ,~~.                _                      _            _
+${AnsiColor.BRIGHT_YELLOW}             (  6 )-_,           (_) __ ___   ____ _  __| |_   _  ___| | _____
+${AnsiColor.BRIGHT_YELLOW}        (\___ )=='-'             | |/ _` \ \ / / _` |/ _` | | | |/ __| |/ / __|
+${AnsiColor.BRIGHT_YELLOW}         \ .   ) )               | | (_| |\ V / (_| | (_| | |_| | (__|   <\__ \
+${AnsiColor.BRIGHT_YELLOW}          \ `-' /               _/ |\__,_| \_/ \__,_|\__,_|\__,_|\___|_|\_\___/
+${AnsiColor.BRIGHT_YELLOW}       ~'`~'`~'`~'`~           |__/${AnsiStyle.NORMAL}
