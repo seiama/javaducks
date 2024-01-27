@@ -29,11 +29,8 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.AppConfiguration;
 import com.seiama.javaducks.util.HashUtil;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.StringReader;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -44,15 +41,15 @@ import java.util.concurrent.TimeUnit;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.Snapshot;
 import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
@@ -62,7 +59,7 @@ public class JavadocService {
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
   private static final String MAVEN_METADATA = "maven-metadata.xml";
-  private final HttpClient httpClient = HttpClient.newHttpClient();
+  private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
   private final LoadingCache<Key, FileSystem> contents;
 
@@ -112,19 +109,18 @@ public class JavadocService {
           final URI metaDataUri = version.asset(MAVEN_METADATA);
           final Metadata metadata;
           try {
-            final HttpResponse<InputStream> response = this.httpClient.send(
-              HttpRequest.newBuilder()
-                .GET()
-                .uri(metaDataUri)
-                .header(HttpHeaders.USER_AGENT, USER_AGENT)
-                .build(),
-              HttpResponse.BodyHandlers.ofInputStream()
-            );
-            try (final InputStream is = response.body()) {
-              final MetadataXpp3Reader reader = new MetadataXpp3Reader();
-              metadata = reader.read(is, true);
+            final ResponseEntity<String> response = this.restClient.get()
+              .uri(metaDataUri)
+              .header(HttpHeaders.USER_AGENT, USER_AGENT)
+              .retrieve()
+              .toEntity(String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+              LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
+              yield null;
             }
-          } catch (final InterruptedException | IOException | XmlPullParserException e) {
+            final MetadataXpp3Reader reader = new MetadataXpp3Reader();
+            metadata = reader.read(new StringReader(response.getBody()), true);
+          } catch (final Exception e) {
             LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
             yield null;
           }
@@ -155,20 +151,17 @@ public class JavadocService {
         final URI hashUri = UriComponentsBuilder.fromUri(jar).replacePath(jar.getPath() + ".sha256").build().toUri();
         final String hash;
         try {
-          final HttpResponse<String> response = this.httpClient.send(
-            HttpRequest.newBuilder()
-              .GET()
-              .uri(hashUri)
-              .header(HttpHeaders.USER_AGENT, USER_AGENT)
-              .build(),
-            HttpResponse.BodyHandlers.ofString()
-          );
-          if (HttpStatusCode.valueOf(response.statusCode()).is2xxSuccessful()) {
-            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Status code: {}", config.name(), version.name(), hashUri, response.statusCode());
+          final ResponseEntity<String> response = this.restClient.get()
+            .uri(hashUri)
+            .header(HttpHeaders.USER_AGENT, USER_AGENT)
+            .retrieve()
+            .toEntity(String.class);
+          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Status code: {}", config.name(), version.name(), hashUri, response.getStatusCode());
             continue;
           }
-          hash = response.body();
-        } catch (final IOException | InterruptedException e) {
+          hash = response.getBody();
+        } catch (final Exception e) {
           LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), hashUri, e.getClass().getName(), e.getMessage());
           continue;
         }
@@ -186,25 +179,22 @@ public class JavadocService {
         }
         // download jar
         try {
-          final HttpResponse<byte[]> response = this.httpClient.send(
-            HttpRequest.newBuilder()
-              .GET()
-              .uri(jar)
-              .header(HttpHeaders.USER_AGENT, USER_AGENT)
-              .build(),
-            HttpResponse.BodyHandlers.ofByteArray()
-          );
-          if (HttpStatusCode.valueOf(response.statusCode()).is2xxSuccessful()) {
-            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.statusCode());
+          final ResponseEntity<byte[]> response = this.restClient.get()
+            .uri(jar)
+            .header(HttpHeaders.USER_AGENT, USER_AGENT)
+            .retrieve()
+            .toEntity(byte[].class);
+          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
             continue;
           }
-          final String downloadedHash = HashUtil.sha256(response.body());
+          final String downloadedHash = HashUtil.sha256(response.getBody());
           if (!downloadedHash.equals(hash)) {
             LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hash, downloadedHash);
             continue;
           }
-          Files.write(versionPath, response.body(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (final IOException | InterruptedException e) {
+          Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (final Exception e) {
           LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
           continue;
         }
