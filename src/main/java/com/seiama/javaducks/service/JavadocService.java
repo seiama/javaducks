@@ -27,13 +27,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.AppConfiguration;
+import com.seiama.javaducks.util.HashUtil;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -44,14 +41,16 @@ import java.util.concurrent.TimeUnit;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.Snapshot;
 import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class JavadocService {
@@ -60,7 +59,7 @@ public class JavadocService {
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
   private static final String MAVEN_METADATA = "maven-metadata.xml";
-  private final HttpClient httpClient = HttpClient.newHttpClient();
+  private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
   private final LoadingCache<Key, FileSystem> contents;
 
@@ -107,22 +106,22 @@ public class JavadocService {
     for (final AppConfiguration.EndpointConfiguration.Version version : config.versions()) {
       final @Nullable URI jar = switch (version.type()) {
         case SNAPSHOT -> {
+          final URI metaDataUri = version.asset(MAVEN_METADATA);
           final Metadata metadata;
           try {
-            final HttpResponse<InputStream> response = this.httpClient.send(
-              HttpRequest.newBuilder()
-                .GET()
-                .uri(version.asset(MAVEN_METADATA))
-                .header(HttpHeaders.USER_AGENT, USER_AGENT)
-                .build(),
-              HttpResponse.BodyHandlers.ofInputStream()
-            );
-            try (final InputStream is = response.body()) {
-              final MetadataXpp3Reader reader = new MetadataXpp3Reader();
-              metadata = reader.read(is, true);
+            final ResponseEntity<String> response = this.restClient.get()
+              .uri(metaDataUri)
+              .header(HttpHeaders.USER_AGENT, USER_AGENT)
+              .retrieve()
+              .toEntity(String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+              LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
+              yield null;
             }
-          } catch (final InterruptedException | IOException | XmlPullParserException e) {
-            LOGGER.info("Could not fetch metadata for {} {}", config.name(), version.name());
+            final MetadataXpp3Reader reader = new MetadataXpp3Reader();
+            metadata = reader.read(new StringReader(response.getBody()), true);
+          } catch (final Exception e) {
+            LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
             yield null;
           }
           final @Nullable Snapshot snapshot = metadata.getVersioning().getSnapshot();
@@ -135,7 +134,7 @@ public class JavadocService {
               snapshot.getBuildNumber()
             ));
           } else {
-            LOGGER.info("Could not find latest version for {} {}", config.name(), version.name());
+            LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
             yield null;
           }
         }
@@ -145,26 +144,58 @@ public class JavadocService {
         try {
           Files.createDirectories(versionPath.getParent());
         } catch (final IOException e) {
-          LOGGER.info("Could not update javadoc for {} {}", config.name(), version.name());
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't not create dir. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
           continue;
         }
+        // get hash
+        final URI hashUri = UriComponentsBuilder.fromUri(jar).replacePath(jar.getPath() + ".sha256").build().toUri();
+        final String hash;
         try {
-          final HttpResponse<InputStream> response = this.httpClient.send(
-            HttpRequest.newBuilder()
-              .GET()
-              .uri(jar)
-              .header(HttpHeaders.USER_AGENT, USER_AGENT)
-              .build(),
-            HttpResponse.BodyHandlers.ofInputStream()
-          );
-          try (
-            final InputStream is = response.body();
-            final OutputStream os = Files.newOutputStream(versionPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-          ) {
-            is.transferTo(os);
+          final ResponseEntity<String> response = this.restClient.get()
+            .uri(hashUri)
+            .header(HttpHeaders.USER_AGENT, USER_AGENT)
+            .retrieve()
+            .toEntity(String.class);
+          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Status code: {}", config.name(), version.name(), hashUri, response.getStatusCode());
+            continue;
           }
-        } catch (final IOException | InterruptedException e) {
-          LOGGER.info("Could not update javadoc for {} {}", config.name(), version.name());
+          hash = response.getBody();
+        } catch (final Exception e) {
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), hashUri, e.getClass().getName(), e.getMessage());
+          continue;
+        }
+        // check hash
+        if (Files.isReadable(versionPath)) {
+          try {
+            final String hashOnDisk = HashUtil.sha256(Files.readAllBytes(versionPath));
+            if (hashOnDisk.equals(hash)) {
+              LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
+              continue;
+            }
+          } catch (final IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        // download jar
+        try {
+          final ResponseEntity<byte[]> response = this.restClient.get()
+            .uri(jar)
+            .header(HttpHeaders.USER_AGENT, USER_AGENT)
+            .retrieve()
+            .toEntity(byte[].class);
+          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
+            continue;
+          }
+          final String downloadedHash = HashUtil.sha256(response.getBody());
+          if (!downloadedHash.equals(hash)) {
+            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hash, downloadedHash);
+            continue;
+          }
+          Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (final Exception e) {
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
           continue;
         }
         LOGGER.info("Updated javadoc for {} {}", config.name(), version.name());

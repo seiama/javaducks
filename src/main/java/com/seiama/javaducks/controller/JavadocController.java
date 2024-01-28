@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
@@ -51,7 +52,10 @@ import static org.springframework.http.ResponseEntity.status;
 
 @Controller
 public class JavadocController {
+  // https://regex101.com/r/fyzJ7g/1
+  private static final Pattern STATICS_PATTERN = Pattern.compile("^(?!.*search-index).*\\.(js|png|css|html)$");
   private static final CacheControl CACHE_CONTROL = CacheControl.maxAge(Duration.ofMinutes(10));
+  private static final CacheControl STATICS_CACHE_CONTROL = CacheControl.maxAge(Duration.ofDays(7));
   private static final ContentDisposition CONTENT_DISPOSITION = ContentDisposition.inline().build();
   private static final Map<String, MediaType> MEDIATYPES = Map.of(
     ".css", MediaType.parseMediaType("text/css"),
@@ -85,7 +89,7 @@ public class JavadocController {
     @PathVariable final String version
   ) {
     final String root = "/%s/%s".formatted(project, version);
-    // This warning can be ignored, we want to keep this FS open.
+    //noinspection resource - This warning can be ignored, we want to keep this FS open.
     final @Nullable FileSystem fs = this.service.contentsFor(new JavadocService.Key(project, version));
     if (fs != null) {
       String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
@@ -95,7 +99,7 @@ public class JavadocController {
       final Path file = fs.getPath(path);
       if (Files.isRegularFile(file)) {
         return ok()
-          .cacheControl(CACHE_CONTROL)
+          .cacheControl(STATICS_PATTERN.matcher(path).find() ? STATICS_CACHE_CONTROL : CACHE_CONTROL)
           .headers(headers -> {
             headers.setContentDisposition(CONTENT_DISPOSITION);
             headers.set("X-JavaDucks", "Quack");

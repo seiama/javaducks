@@ -9,13 +9,13 @@ buildscript {
 }
 
 plugins {
-  val indraVersion = "3.1.3"
-  id("com.diffplug.spotless") version "6.22.0"
-  id("net.kyori.indra") version indraVersion
-  id("net.kyori.indra.checkstyle") version indraVersion
-  id("io.spring.dependency-management") version "1.1.3"
-  id("org.springframework.boot") version "3.1.4"
-  id("com.google.cloud.tools.jib") version "3.4.0"
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.indra)
+  alias(libs.plugins.indraCheckstyle)
+  alias(libs.plugins.springDependencyManagement)
+  alias(libs.plugins.springBoot)
+  alias(libs.plugins.jib)
+  alias(libs.plugins.graalvmNative)
 }
 
 group = "com.seiama"
@@ -43,6 +43,7 @@ spotless {
     indentWithSpaces(2)
     licenseHeaderFile(rootProject.file("license_header.txt"))
     trimTrailingWhitespace()
+    targetExclude("build/generated/**/*.java")
   }
 }
 
@@ -92,17 +93,31 @@ jib {
   }
 }
 
+graalvmNative {
+  binaries {
+    binaries.forEach {
+      it.pgoInstrument = true
+      // for some reason it detects javaducks as a lib and doesn't build an executable...
+      it.sharedLibrary = false
+      // enable during development
+//      it.quickBuild = true
+    }
+  }
+}
+
 dependencies {
   annotationProcessor("org.springframework.boot", "spring-boot-configuration-processor")
-  checkstyle("ca.stellardrift:stylecheck:0.2.1")
-  compileOnlyApi("org.jetbrains:annotations:24.0.1")
-  implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
-  implementation("org.apache.maven:maven-repository-metadata:3.9.4")
+  checkstyle(libs.stylecheck)
+  compileOnlyApi(libs.annotations)
+  implementation(libs.caffeine)
+  implementation(libs.mavenRepositoryMetadata)
   implementation("org.springframework.boot", "spring-boot-starter-web")
   testImplementation("org.springframework.boot", "spring-boot-starter-test") {
     exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
   }
+  developmentOnly("org.springframework.boot", "spring-boot-devtools")
 }
+
 tasks {
   val outputImageId = register("printJibMeta") {
     description = "Expose image information as an output for GitHub Actions"
@@ -127,5 +142,9 @@ tasks {
 
   sequenceOf(jib, jibDockerBuild, jibBuildTar).forEach {
     it.configure { finalizedBy(outputImageId.name) }
+  }
+
+  checkstyleAot {
+    isEnabled = false
   }
 }
