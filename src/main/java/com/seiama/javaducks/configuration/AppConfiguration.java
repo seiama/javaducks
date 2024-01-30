@@ -1,7 +1,7 @@
 /*
  * This file is part of javaducks, licensed under the MIT License.
  *
- * Copyright (c) 2023 Seiama
+ * Copyright (c) 2023-2024 Seiama
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,11 @@ package com.seiama.javaducks.configuration;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
+@NullMarked
 public record AppConfiguration(
   URI rootRedirect,
   Path storage,

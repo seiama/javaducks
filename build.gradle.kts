@@ -12,8 +12,8 @@ plugins {
   alias(libs.plugins.spotless)
   alias(libs.plugins.indra)
   alias(libs.plugins.indraCheckstyle)
-  alias(libs.plugins.springDependencyManagement)
-  alias(libs.plugins.springBoot)
+  alias(libs.plugins.spring.dependencyManagement)
+  alias(libs.plugins.spring.boot)
   alias(libs.plugins.jib)
   alias(libs.plugins.graalvmNative)
 }
@@ -106,16 +106,17 @@ graalvmNative {
 }
 
 dependencies {
-  annotationProcessor("org.springframework.boot", "spring-boot-configuration-processor")
+  annotationProcessor(libs.spring.boot.configurationProcessor)
   checkstyle(libs.stylecheck)
-  compileOnlyApi(libs.annotations)
+  compileOnlyApi(libs.jetbrainsAnnotations)
+  compileOnlyApi(libs.jspecify)
   implementation(libs.caffeine)
   implementation(libs.mavenRepositoryMetadata)
-  implementation("org.springframework.boot", "spring-boot-starter-web")
-  testImplementation("org.springframework.boot", "spring-boot-starter-test") {
+  implementation(libs.spring.boot.starter.web)
+  testImplementation(libs.spring.boot.starter.test) {
     exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
   }
-  developmentOnly("org.springframework.boot", "spring-boot-devtools")
+  developmentOnly(libs.spring.boot.devtools)
 }
 
 tasks {
@@ -141,7 +142,9 @@ tasks {
   }
 
   sequenceOf(jib, jibDockerBuild, jibBuildTar).forEach {
-    it.configure { finalizedBy(outputImageId.name) }
+    it.configure {
+      finalizedBy(outputImageId.name)
+    }
   }
 
   checkstyleAot {

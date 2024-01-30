@@ -1,7 +1,7 @@
 /*
  * This file is part of javaducks, licensed under the MIT License.
  *
- * Copyright (c) 2023 Seiama
+ * Copyright (c) 2023-2024 Seiama
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.CacheControl;
@@ -51,6 +52,7 @@ import static org.springframework.http.ResponseEntity.ok;
 import static org.springframework.http.ResponseEntity.status;
 
 @Controller
+@NullMarked
 public class JavadocController {
   // https://regex101.com/r/fyzJ7g/1
   private static final Pattern STATICS_PATTERN = Pattern.compile("^(?!.*search-index).*\\.(js|png|css|html)$");

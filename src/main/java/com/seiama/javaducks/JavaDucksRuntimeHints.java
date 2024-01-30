@@ -1,7 +1,7 @@
 /*
  * This file is part of javaducks, licensed under the MIT License.
  *
- * Copyright (c) 2023 Seiama
+ * Copyright (c) 2023-2024 Seiama
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
  */
 package com.seiama.javaducks;
 
+import org.jspecify.annotations.NullMarked;
 import org.springframework.aot.hint.ExecutableMode;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -31,8 +32,8 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 
 @Configuration
 @ImportRuntimeHints(JavaDucksRuntimeHints.JavaDucksRuntimeHintsRegistrar.class)
+@NullMarked
 public class JavaDucksRuntimeHints {
-
   static class JavaDucksRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(final RuntimeHints hints, final ClassLoader classLoader) {

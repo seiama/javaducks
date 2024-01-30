@@ -1,7 +1,7 @@
 /*
  * This file is part of javaducks, licensed under the MIT License.
  *
- * Copyright (c) 2023 Seiama
+ * Copyright (c) 2023-2024 Seiama
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +25,10 @@ package com.seiama.javaducks.util;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import org.jspecify.annotations.NullMarked;
 
+@NullMarked
 public final class HashUtil {
-
   private HashUtil() {
   }
 

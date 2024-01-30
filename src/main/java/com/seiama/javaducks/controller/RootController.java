@@ -1,7 +1,7 @@
 /*
  * This file is part of javaducks, licensed under the MIT License.
  *
- * Copyright (c) 2023 Seiama
+ * Copyright (c) 2023-2024 Seiama
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 package com.seiama.javaducks.controller;
 
 import com.seiama.javaducks.configuration.AppConfiguration;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
+@NullMarked
 public class RootController {
   private final AppConfiguration configuration;
 

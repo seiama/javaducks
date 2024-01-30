@@ -1,7 +1,7 @@
 /*
  * This file is part of javaducks, licensed under the MIT License.
  *
- * Copyright (c) 2023 Seiama
+ * Copyright (c) 2023-2024 Seiama
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 package com.seiama.javaducks;
 
 import com.seiama.javaducks.configuration.AppConfiguration;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -33,6 +34,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   AppConfiguration.class
 })
 @EnableScheduling
+@NullMarked
 @SpringBootApplication
 @SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
 public class JavaDucksApplication {
