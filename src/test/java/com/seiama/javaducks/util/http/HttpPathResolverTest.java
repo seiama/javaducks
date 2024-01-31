@@ -21,38 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.util.http;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.HandlerMapping;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
-@NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
-) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-      public enum Type {
-        SNAPSHOT,
-      }
-    }
+class HttpPathResolverTest {
+  @Test
+  void test() {
+    final MockHttpServletRequest request = new MockHttpServletRequest();
+    request.setAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, "/javadoc/io.netty/netty-buffer/4.1.106.Final/io/netty/buffer/AbstractByteBufAllocator.html");
+    request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/javadoc/{groupId}/{artifactId}/{version}/**");
+    assertEquals("io/netty/buffer/AbstractByteBufAllocator.html", HttpPathResolver.resolvePathBasedOnPattern(request));
   }
 }

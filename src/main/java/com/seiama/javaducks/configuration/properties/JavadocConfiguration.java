@@ -21,38 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.configuration.properties;
 
-import java.net.URI;
-import java.nio.file.Path;
 import java.util.List;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
+@ConfigurationProperties("app.javadoc")
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
+public record JavadocConfiguration(
+  List<String> repositories
 ) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
-
-      public enum Type {
-        SNAPSHOT,
-      }
-    }
-  }
 }

@@ -21,38 +21,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.util.maven;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.jspecify.annotations.Nullable;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
-) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
+public final class MavenConstants {
+  public static final String SNAPSHOT_VERSION_SUFFIX = "-SNAPSHOT";
 
-      public enum Type {
-        SNAPSHOT,
-      }
+  public static final String METADATA_FILE_NAME = "maven-metadata.xml";
+
+  public static final String CLASSIFIER_JAVADOC = "javadoc";
+  public static final String EXTENSION_JAR = "jar";
+
+  private MavenConstants() {
+  }
+
+  public static String versionWithoutSnapshotSuffix(final String version) {
+    if (version.endsWith(SNAPSHOT_VERSION_SUFFIX)) {
+      return version.substring(0, version.length() - SNAPSHOT_VERSION_SUFFIX.length());
     }
+    return version;
+  }
+
+  public static String metadataUrl(final String groupId, final String artifactId, final @Nullable String version) {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(groupId.replace('.', '/'));
+    sb.append('/');
+    sb.append(artifactId);
+    sb.append('/');
+    if (version != null) {
+      sb.append(version);
+      sb.append('/');
+    }
+    sb.append(METADATA_FILE_NAME);
+    return sb.toString();
   }
 }

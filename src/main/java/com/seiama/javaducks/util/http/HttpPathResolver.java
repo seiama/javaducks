@@ -21,38 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.util.http;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.servlet.HandlerMapping;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
-) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
+public final class HttpPathResolver {
+  private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
-      public enum Type {
-        SNAPSHOT,
-      }
-    }
+  private HttpPathResolver() {
+  }
+
+  public static String resolvePathBasedOnPattern(final HttpServletRequest request) {
+    final String pathWithinHandlerMapping = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
+    final String bestMatchingPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+    return MATCHER.extractPathWithinPattern(bestMatchingPattern, pathWithinHandlerMapping);
   }
 }

@@ -21,38 +21,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.util.maven.metadata;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.jspecify.annotations.Nullable;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
+@JacksonXmlRootElement(localName = "metadata")
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
+public record MavenMetadata(
+  @JacksonXmlProperty(localName = "modelVersion", isAttribute = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable String modelVersion,
+  String groupId,
+  String artifactId,
+  @Nullable String version,
+  Versioning versioning
 ) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
-
-      public enum Type {
-        SNAPSHOT,
-      }
-    }
-  }
+  public static final XmlMapper XML_MAPPER = XmlMapper.builder()
+    .configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true)
+    .build();
 }

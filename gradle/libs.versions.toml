@@ -13,6 +13,9 @@ graalvmNative = { id = "org.graalvm.buildtools.native", version = "0.9.28" }
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version = "3.1.8" }
+commons = { module = "com.seiama:commons", version = "1.0.0-SNAPSHOT" }
+guava = { module = "com.google.guava:guava", version = "33.0.0-jre" }
+jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml" }
 jetbrainsAnnotations = { module = "org.jetbrains:annotations", version = "24.1.0" }
 jspecify = { module = "org.jspecify:jspecify", version = "0.3.0" }
 mavenRepositoryMetadata = { module = "org.apache.maven:maven-repository-metadata", version = "3.9.6" }

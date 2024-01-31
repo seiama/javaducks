@@ -21,38 +21,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.util.maven;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
+import com.seiama.javaducks.util.crypto.HashAlgorithm;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
-) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
+public enum MavenHashType {
+  MD5("md5", HashAlgorithm.MD5),
+  SHA1("sha1", HashAlgorithm.SHA1),
+  SHA256("sha256", HashAlgorithm.SHA256),
+  SHA512("sha512", HashAlgorithm.SHA512);
 
-      public enum Type {
-        SNAPSHOT,
-      }
-    }
+  private final String extension;
+  private final HashAlgorithm algorithm;
+
+  MavenHashType(
+    final String extension,
+    final HashAlgorithm algorithm
+  ) {
+    this.extension = extension;
+    this.algorithm = algorithm;
+  }
+
+  public String extension() {
+    return this.extension;
+  }
+
+  public HashAlgorithm algorithm() {
+    return this.algorithm;
   }
 }

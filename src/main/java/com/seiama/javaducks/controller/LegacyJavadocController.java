@@ -23,21 +23,17 @@
  */
 package com.seiama.javaducks.controller;
 
-import com.seiama.javaducks.service.javadoc.JavadocService;
-import com.seiama.javaducks.service.maven.request.ArtifactRequest;
-import com.seiama.javaducks.util.http.HttpPathResolver;
-import com.seiama.javaducks.util.http.MediaTypes;
-import com.seiama.javaducks.util.maven.MavenConstants;
+import com.seiama.javaducks.service.LegacyJavadocService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.CacheControl;
@@ -48,46 +44,61 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.HandlerMapping;
 
+import static org.springframework.http.ResponseEntity.notFound;
 import static org.springframework.http.ResponseEntity.ok;
+import static org.springframework.http.ResponseEntity.status;
 
-// TODO: permitted repository sources?
 @Controller
+@Deprecated
 @NullMarked
-public class JavadocController {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JavadocController.class);
+public class LegacyJavadocController {
   // https://regex101.com/r/fyzJ7g/1
   private static final Pattern STATICS_PATTERN = Pattern.compile("^(?!.*search-index).*\\.(js|png|css|html)$");
   private static final CacheControl CACHE_CONTROL = CacheControl.maxAge(Duration.ofMinutes(10));
   private static final CacheControl STATICS_CACHE_CONTROL = CacheControl.maxAge(Duration.ofDays(7));
   private static final ContentDisposition CONTENT_DISPOSITION = ContentDisposition.inline().build();
-
-  private static final String DEFAULT_PATH = "index.html";
-
-  private final JavadocService service;
+  private static final Map<String, MediaType> MEDIATYPES = Map.of(
+    ".css", MediaType.parseMediaType("text/css"),
+    ".js", MediaType.parseMediaType("application/javascript"),
+    ".zip", MediaType.parseMediaType("application/zip")
+  );
+  private final LegacyJavadocService service;
 
   @Autowired
-  public JavadocController(final JavadocService service) {
+  public LegacyJavadocController(final LegacyJavadocService service) {
     this.service = service;
   }
 
-  @GetMapping("/javadoc/{groupId}/{artifactId}/{version}/**")
-  public ResponseEntity<?> javadocGet(
+  @GetMapping("/{project:[a-z]+}/{version:[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?}")
+  @ResponseBody
+  public ResponseEntity<?> redirectToPathWithTrailingSlash(
     final HttpServletRequest request,
-    @PathVariable
-    final String groupId,
-    @PathVariable
-    final String artifactId,
-    @PathVariable
-    final String version
+    @PathVariable final String project,
+    @PathVariable final String version
   ) {
-    String path = HttpPathResolver.resolvePathBasedOnPattern(request);
-    if (path.isBlank()) {
-      path = DEFAULT_PATH;
-    }
+    return status(HttpStatus.FOUND)
+      .location(URI.create(request.getRequestURI() + "/"))
+      .build();
+  }
 
-    final @Nullable FileSystem fs = this.service.contentsFor(new ArtifactRequest(groupId, artifactId, version, null, null, MavenConstants.CLASSIFIER_JAVADOC, MavenConstants.EXTENSION_JAR, null, null));
+  @GetMapping("/{project:[a-z]+}/{version:[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?}/**")
+  @ResponseBody
+  public ResponseEntity<?> serveJavadocs(
+    final HttpServletRequest request,
+    @PathVariable final String project,
+    @PathVariable final String version
+  ) {
+    final String root = "/%s/%s".formatted(project, version);
+    //noinspection resource - This warning can be ignored, we want to keep this FS open.
+    final @Nullable FileSystem fs = this.service.contentsFor(new LegacyJavadocService.Key(project, version));
     if (fs != null) {
+      String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
+      if (path.equals("/")) {
+        path = "index.html";
+      }
       final Path file = fs.getPath(path);
       if (Files.isRegularFile(file)) {
         return ok()
@@ -96,15 +107,18 @@ public class JavadocController {
             headers.setContentDisposition(CONTENT_DISPOSITION);
             headers.set("X-JavaDucks", "Quack");
             final String name = file.getFileName().toString();
-            final MediaType type = MediaTypes.fromFileName(name);
-            if (type != null) {
-              headers.setContentType(type);
+            for (final Map.Entry<String, MediaType> entry : MEDIATYPES.entrySet()) {
+              if (name.startsWith(entry.getKey())) {
+                headers.setContentType(entry.getValue());
+                break;
+              }
             }
           })
           .body(new FileSystemResource(file));
       }
     }
-
-    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    return notFound()
+      .cacheControl(CacheControl.noCache())
+      .build();
   }
 }

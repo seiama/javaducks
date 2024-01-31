@@ -105,12 +105,19 @@ graalvmNative {
   }
 }
 
+repositories {
+  maven(url = "https://s01.oss.sonatype.org/content/repositories/snapshots/")
+}
+
 dependencies {
   annotationProcessor(libs.spring.boot.configurationProcessor)
   checkstyle(libs.stylecheck)
   compileOnlyApi(libs.jetbrainsAnnotations)
   compileOnlyApi(libs.jspecify)
   implementation(libs.caffeine)
+  implementation(libs.commons)
+  implementation(libs.guava)
+  implementation(libs.jackson.dataformat.xml)
   implementation(libs.mavenRepositoryMetadata)
   implementation(libs.spring.boot.starter.web)
   testImplementation(libs.spring.boot.starter.test) {
@@ -148,6 +155,10 @@ tasks {
   }
 
   checkstyleAot {
+    isEnabled = false
+  }
+
+  checkstyleAotTest {
     isEnabled = false
   }
 }

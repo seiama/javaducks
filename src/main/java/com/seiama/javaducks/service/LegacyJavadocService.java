@@ -53,10 +53,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+@Deprecated
 @NullMarked
 @Service
-public class JavadocService {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JavadocService.class);
+public class LegacyJavadocService {
+  private static final Logger LOGGER = LoggerFactory.getLogger(LegacyJavadocService.class);
   private static final long REFRESH_INITIAL_DELAY = 0; // in minutes
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
@@ -66,7 +67,7 @@ public class JavadocService {
   private final LoadingCache<Key, FileSystem> contents;
 
   @Autowired
-  public JavadocService(final AppConfiguration configuration) {
+  public LegacyJavadocService(final AppConfiguration configuration) {
     this.configuration = configuration;
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))

@@ -21,37 +21,51 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration;
+package com.seiama.javaducks.configuration.properties;
 
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "app")
-@Deprecated
+@ConfigurationProperties("app.maven")
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints
+public record MavenConfiguration(
+  Repositories repositories
 ) {
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
+  public record Repositories(
+    Map<String, Group> groups,
+    Map<String, Proxied> proxied
   ) {
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
+    public @Nullable Repository get(final String id) {
+      final Group group = this.groups.get(id);
+      if (group != null) {
+        return group;
       }
+      final Proxied proxied = this.proxied.get(id);
+      if (proxied != null) {
+        return proxied;
+      }
+      return null;
+    }
 
-      public enum Type {
-        SNAPSHOT,
+    public sealed interface Repository permits Group, Proxied {
+    }
+
+    public record Group(
+      List<String> members
+    ) implements Repository {
+    }
+
+    public record Proxied(
+      String url,
+      Path cache
+    ) implements Repository {
+      public URI url(final String url) {
+        return URI.create(this.url + url);
       }
     }
   }
