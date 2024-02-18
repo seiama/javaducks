@@ -1,0 +1,26 @@
+<style>
+  .outdated-banner {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    padding: 5px;
+    background-color: #ef4444;
+    color: #ffffff;
+  }
+
+  .outdated-banner__button {
+    cursor: pointer;
+  }
+
+  .outdated-banner__button:hover {
+    color: #dddddd;
+    text-decoration: underline;
+  }
+</style>
+<div class="outdated-banner">
+  <div class="outdated-banner__content">
+    You are looking at old Javadocs for %1$s.
+    <a class="outdated-banner__button" onclick="location.href = location.href.replace('%3$s', '%4$s');">Click here</a> to look at %2$s instead.
+  </div>
+</div>
+%5$s
