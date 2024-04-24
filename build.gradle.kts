@@ -1,4 +1,5 @@
 import java.nio.file.StandardOpenOption
+import java.time.Instant
 import kotlin.io.path.Path
 import kotlin.io.path.bufferedWriter
 
@@ -12,6 +13,7 @@ plugins {
   alias(libs.plugins.spotless)
   alias(libs.plugins.indra)
   alias(libs.plugins.indraCheckstyle)
+  alias(libs.plugins.indraGit)
   alias(libs.plugins.spring.dependencyManagement)
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.jib)
@@ -50,7 +52,10 @@ spotless {
 jib {
   to {
     image = "ghcr.io/seiama/javaducks"
-    tags = setOf("latest", project.version.toString())
+    tags = setOf(
+      "latest",
+      "${indraGit.branchName()}-${indraGit.commit()?.name()?.take(8)}-${Instant.now().epochSecond}"
+    )
   }
 
   from {
@@ -106,17 +111,16 @@ graalvmNative {
 }
 
 dependencies {
-  annotationProcessor(libs.spring.boot.configurationProcessor)
+  annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
   checkstyle(libs.stylecheck)
-  compileOnlyApi(libs.jetbrainsAnnotations)
   compileOnlyApi(libs.jspecify)
   implementation(libs.caffeine)
   implementation(libs.mavenRepositoryMetadata)
-  implementation(libs.spring.boot.starter.web)
-  testImplementation(libs.spring.boot.starter.test) {
+  implementation("org.springframework.boot:spring-boot-starter-web")
+  testImplementation("org.springframework.boot:spring-boot-starter-test") {
     exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
   }
-  developmentOnly(libs.spring.boot.devtools)
+  developmentOnly("org.springframework.boot:spring-boot-devtools")
 }
 
 tasks {

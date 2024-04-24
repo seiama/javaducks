@@ -26,7 +26,7 @@ package com.seiama.javaducks.service;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.seiama.javaducks.configuration.AppConfiguration;
+import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HashUtil;
 import java.io.IOException;
 import java.io.StringReader;

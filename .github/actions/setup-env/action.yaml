@@ -11,13 +11,13 @@ runs:
   using: "composite"
   steps:
   - name: "gradle / validate wrapper"
-    uses: "gradle/wrapper-validation-action@v1"
+    uses: "gradle/actions/wrapper-validation@v3"
   - name: "java ${{ inputs.java-version }}"
     uses: "actions/setup-java@v3"
     with:
       distribution: "zulu"
       java-version: "${{ inputs.java-version }}"
   - name: "gradle / initialize"
-    uses: "gradle/gradle-build-action@v2"
+    uses: "gradle/actions/setup-gradle@v3"
     with:
       cache-read-only: "${{ github.ref != 'refs/heads/main' || github.event_name == 'pull_request' }}"

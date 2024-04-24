@@ -23,7 +23,7 @@
  */
 package com.seiama.javaducks.controller;
 
-import com.seiama.javaducks.configuration.AppConfiguration;
+import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

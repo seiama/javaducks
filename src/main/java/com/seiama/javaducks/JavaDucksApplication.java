@@ -23,7 +23,7 @@
  */
 package com.seiama.javaducks;
 
-import com.seiama.javaducks.configuration.AppConfiguration;
+import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
