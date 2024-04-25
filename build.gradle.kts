@@ -116,6 +116,7 @@ dependencies {
   compileOnlyApi(libs.jspecify)
   implementation(libs.caffeine)
   implementation(libs.mavenRepositoryMetadata)
+  implementation("org.springframework.boot:spring-boot-starter-actuator")
   implementation("org.springframework.boot:spring-boot-starter-web")
   testImplementation("org.springframework.boot:spring-boot-starter-test") {
     exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
