@@ -107,7 +107,7 @@ public class JavadocController {
             headers.set("X-JavaDucks", "Quack");
             final String name = file.getFileName().toString();
             for (final Map.Entry<String, MediaType> entry : MEDIATYPES.entrySet()) {
-              if (name.startsWith(entry.getKey())) {
+              if (name.endsWith(entry.getKey())) {
                 headers.setContentType(entry.getValue());
                 break;
               }
