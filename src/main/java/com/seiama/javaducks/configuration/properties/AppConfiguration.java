@@ -36,10 +36,12 @@ public record AppConfiguration(
   Path storage,
   List<EndpointConfiguration> endpoints
 ) {
+  @NullMarked
   public record EndpointConfiguration(
     String name,
     List<Version> versions
   ) {
+    @NullMarked
     public record Version(
       String name,
       String path,
@@ -49,6 +51,7 @@ public record AppConfiguration(
         return URI.create(this.path + name);
       }
 
+      @NullMarked
       public enum Type {
         SNAPSHOT,
         RELEASE,

@@ -208,6 +208,7 @@ public class JavadocService {
     }
   }
 
+  @NullMarked
   public record Key(
     String project,
     String version

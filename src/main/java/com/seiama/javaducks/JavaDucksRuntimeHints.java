@@ -34,6 +34,7 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 @ImportRuntimeHints(JavaDucksRuntimeHints.JavaDucksRuntimeHintsRegistrar.class)
 @NullMarked
 public class JavaDucksRuntimeHints {
+  @NullMarked
   static class JavaDucksRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(final RuntimeHints hints, final ClassLoader classLoader) {
