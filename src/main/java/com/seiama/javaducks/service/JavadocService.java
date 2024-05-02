@@ -27,7 +27,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.util.HashUtil;
+import com.seiama.javaducks.util.maven.MavenHashType;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -173,7 +173,7 @@ public class JavadocService {
         // check hash
         if (Files.isReadable(versionPath)) {
           try {
-            final String hashOnDisk = HashUtil.sha256(Files.readAllBytes(versionPath));
+            final String hashOnDisk = MavenHashType.SHA256.algorithm().hash(versionPath).toString();
             if (hashOnDisk.equals(hash)) {
               LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
               continue;
@@ -193,7 +193,7 @@ public class JavadocService {
             LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
             continue;
           }
-          final String downloadedHash = HashUtil.sha256(response.getBody());
+          final String downloadedHash = MavenHashType.SHA256.algorithm().hash(response.getBody()).toString();
           if (!downloadedHash.equals(hash)) {
             LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hash, downloadedHash);
             continue;
