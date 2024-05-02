@@ -51,6 +51,7 @@ public record AppConfiguration(
 
       public enum Type {
         SNAPSHOT,
+        RELEASE
       }
     }
   }

@@ -107,6 +107,9 @@ public class JavadocService {
     final Path basePath = this.configuration.storage().resolve(config.name());
     for (final AppConfiguration.EndpointConfiguration.Version version : config.versions()) {
       final @Nullable URI jar = switch (version.type()) {
+        case RELEASE -> {
+          yield URI.create(version.path());
+        }
         case SNAPSHOT -> {
           final URI metaDataUri = version.asset(MAVEN_METADATA);
           final Metadata metadata;
