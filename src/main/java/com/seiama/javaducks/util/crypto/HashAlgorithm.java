@@ -36,8 +36,7 @@ public enum HashAlgorithm {
   MD5(Hashing.md5()),
   SHA1(Hashing.sha1()),
   SHA256(Hashing.sha256()),
-  SHA512(Hashing.sha512()),
-  ;
+  SHA512(Hashing.sha512());
 
   private final HashFunction function;
 

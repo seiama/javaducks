@@ -27,11 +27,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
-<<<<<<< HEAD
 import com.seiama.javaducks.util.maven.MavenHashType;
-=======
-import com.seiama.javaducks.util.crypto.HashAlgorithm;
->>>>>>> ff3e69d (feat: add known maven hash types)
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -41,6 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.Snapshot;
@@ -65,6 +62,7 @@ public class JavadocService {
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
   private static final String MAVEN_METADATA = "maven-metadata.xml";
+  private static final List<MavenHashType> HASH_TYPES = List.of(MavenHashType.SHA256, MavenHashType.SHA1);
   private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
   private final LoadingCache<Key, FileSystem> contents;
@@ -164,28 +162,21 @@ public class JavadocService {
         }
 
         // get hash
-        final URI hashUri = UriComponentsBuilder.fromUri(jar).replacePath(jar.getPath() + ".sha256").build().toUri();
-        final String hash;
+        final MavenHashPair hashPair;
         try {
-          final ResponseEntity<String> response = this.restClient.get()
-            .uri(hashUri)
-            .header(HttpHeaders.USER_AGENT, USER_AGENT)
-            .retrieve()
-            .toEntity(String.class);
-          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Status code: {}", config.name(), version.name(), hashUri, response.getStatusCode());
-            continue;
-          }
-          hash = response.getBody();
+          hashPair = this.downloadHash(config, jar);
         } catch (final Exception e) {
-          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), hashUri, e.getClass().getName(), e.getMessage());
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
           continue;
+        }
+        if (hashPair == null) {
+          throw new RuntimeException("Could not download hash for " + config.name() + " " + version.name());
         }
         // check hash
         if (Files.isReadable(versionPath)) {
           try {
-            final String hashOnDisk = HashAlgorithm.SHA256.hash(versionPath).toString();
-            if (hashOnDisk.equals(hash)) {
+            final String hashOnDisk = hashPair.hashType.algorithm().hash(versionPath).toString();
+            if (hashOnDisk.equals(hashPair.hash)) {
               LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
               continue;
             }
@@ -204,9 +195,9 @@ public class JavadocService {
             LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
             continue;
           }
-          final String downloadedHash = HashAlgorithm.SHA256.hash(response.getBody()).toString();
-          if (!downloadedHash.equals(hash)) {
-            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hash, downloadedHash);
+          final String downloadedHash = hashPair.hashType.algorithm().hash(response.getBody()).toString();
+          if (!downloadedHash.equals(hashPair.hash)) {
+            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.hash, downloadedHash);
             continue;
           }
           Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -219,10 +210,38 @@ public class JavadocService {
     }
   }
 
+  public @Nullable MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri) {
+    for (final MavenHashType hashType : HASH_TYPES) {
+      final URI hashUri = UriComponentsBuilder.fromUri(jarUri).replacePath(jarUri.getPath() + "." + hashType.extension()).build().toUri();
+      try {
+        final ResponseEntity<String> response = this.restClient.get()
+          .uri(hashUri)
+          .header(HttpHeaders.USER_AGENT, USER_AGENT)
+          .retrieve()
+          .toEntity(String.class);
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+          LOGGER.debug("Downloaded hash for {}. Url: {} using {}", config.name(), hashUri, hashType);
+          return new MavenHashPair(response.getBody(), hashType);
+        }
+      } catch (final Exception e) {
+        // TODO: Should we log the full stack trace? Potentially only log the exception message under DEBUG level
+        LOGGER.warn("Could not download hash for {}. Url: {}, Exception: {}: {}", config.name(), hashUri, e.getClass().getName(), e.getMessage());
+      }
+    }
+    return null;
+  }
+
   @NullMarked
   public record Key(
     String project,
     String version
+  ) {
+  }
+
+  @NullMarked
+  public record MavenHashPair(
+    String hash,
+    MavenHashType hashType
   ) {
   }
 }
