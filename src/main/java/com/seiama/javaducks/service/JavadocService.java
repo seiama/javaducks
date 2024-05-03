@@ -152,6 +152,13 @@ public class JavadocService {
           LOGGER.warn("Could not update javadoc for {} {}. Couldn't not create dir. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
           continue;
         }
+
+        // don't download again if it's a release
+        if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE && Files.exists(versionPath)) {
+          LOGGER.debug("Javadoc for {} {} is a release and will not be updated", config.name(), version.name());
+          return;
+        }
+
         // get hash
         final URI hashUri = UriComponentsBuilder.fromUri(jar).replacePath(jar.getPath() + ".sha256").build().toUri();
         final String hash;
