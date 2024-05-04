@@ -197,7 +197,7 @@ public class JavadocService {
           }
           final String downloadedHash = hashPair.type().algorithm().hash(response.getBody()).toString();
           if (!downloadedHash.equals(hashPair.hash())) {
-            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.hash(), downloadedHash);
+            LOGGER.warn("Could not update javadoc for {} {}. {} Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.type(), hashPair.hash(), downloadedHash);
             continue;
           }
           Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
