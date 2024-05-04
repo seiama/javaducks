@@ -175,7 +175,7 @@ public class JavadocService {
         // check hash
         if (Files.isReadable(versionPath)) {
           try {
-            final String hashOnDisk = hashPair.hashType.algorithm().hash(versionPath).toString();
+            final String hashOnDisk = hashPair.type().algorithm().hash(versionPath).toString();
             if (hashOnDisk.equals(hashPair.hash)) {
               LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
               continue;
@@ -195,9 +195,9 @@ public class JavadocService {
             LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
             continue;
           }
-          final String downloadedHash = hashPair.hashType.algorithm().hash(response.getBody()).toString();
-          if (!downloadedHash.equals(hashPair.hash)) {
-            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.hash, downloadedHash);
+          final String downloadedHash = hashPair.type().algorithm().hash(response.getBody()).toString();
+          if (!downloadedHash.equals(hashPair.hash())) {
+            LOGGER.warn("Could not update javadoc for {} {}. Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.hash(), downloadedHash);
             continue;
           }
           Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -220,7 +220,7 @@ public class JavadocService {
           .retrieve()
           .toEntity(String.class);
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-          LOGGER.debug("Downloaded hash for {}. Url: {} using {}", config.name(), hashUri, hashType);
+          LOGGER.debug("Downloaded hash for {}. Url: {} using hash type {}", config.name(), hashUri, hashType);
           return new MavenHashPair(response.getBody(), hashType);
         }
       } catch (final Exception e) {
@@ -241,7 +241,7 @@ public class JavadocService {
   @NullMarked
   public record MavenHashPair(
     String hash,
-    MavenHashType hashType
+    MavenHashType type
   ) {
   }
 }
