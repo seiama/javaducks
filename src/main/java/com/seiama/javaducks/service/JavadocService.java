@@ -176,7 +176,7 @@ public class JavadocService {
         if (Files.isReadable(versionPath)) {
           try {
             final String hashOnDisk = hashPair.type().algorithm().hash(versionPath).toString();
-            if (hashOnDisk.equals(hashPair.hash)) {
+            if (hashOnDisk.equals(hashPair.hash())) {
               LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
               continue;
             }
