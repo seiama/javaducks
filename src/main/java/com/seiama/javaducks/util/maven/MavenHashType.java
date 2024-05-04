@@ -21,37 +21,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.util;
+package com.seiama.javaducks.util.maven;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import com.seiama.javaducks.util.crypto.HashAlgorithm;
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
-public final class HashUtil {
-  private HashUtil() {
+public enum MavenHashType {
+  MD5("md5", HashAlgorithm.MD5),
+  SHA1("sha1", HashAlgorithm.SHA1),
+  SHA256("sha256", HashAlgorithm.SHA256),
+  SHA512("sha512", HashAlgorithm.SHA512);
+
+  private final String extension;
+  private final HashAlgorithm algorithm;
+
+  MavenHashType(
+    final String extension,
+    final HashAlgorithm algorithm
+  ) {
+    this.extension = extension;
+    this.algorithm = algorithm;
   }
 
-  public static String sha256(final byte[] input) {
-    try {
-      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      final byte[] hash = digest.digest(input);
-      return bytesToHex(hash);
-    } catch (final NoSuchAlgorithmException e) {
-      // can't happen
-      throw new RuntimeException(e);
-    }
+  public String extension() {
+    return this.extension;
   }
 
-  public static String bytesToHex(final byte[] hash) {
-    final StringBuilder hexString = new StringBuilder(2 * hash.length);
-    for (final byte b : hash) {
-      final String hex = Integer.toHexString(0xff & b);
-      if (hex.length() == 1) {
-        hexString.append('0');
-      }
-      hexString.append(hex);
-    }
-    return hexString.toString();
+  public HashAlgorithm algorithm() {
+    return this.algorithm;
   }
 }

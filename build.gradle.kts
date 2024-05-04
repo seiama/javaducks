@@ -114,6 +114,7 @@ dependencies {
   annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
   checkstyle(libs.stylecheck)
   compileOnlyApi(libs.jspecify)
+  implementation(libs.guava)
   implementation(libs.caffeine)
   implementation(libs.mavenRepositoryMetadata)
   implementation("org.springframework.boot:spring-boot-starter-actuator")
