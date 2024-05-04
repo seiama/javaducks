@@ -225,7 +225,7 @@ public class JavadocService {
         }
       } catch (final Exception e) {
         // TODO: Should we log the full stack trace? Potentially only log the exception message under DEBUG level
-        LOGGER.warn("Could not download hash for {}. Url: {}, Exception: {}: {}", config.name(), hashUri, e.getClass().getName(), e.getMessage());
+        LOGGER.warn("Could not download {} hash for {}. Url: {}, Exception: {}: {}", hashType, config.name(), hashUri, e.getClass().getName(), e.getMessage());
       }
     }
     return null;
