@@ -42,7 +42,7 @@ public record AppConfiguration(
   List<MavenHashType> hashTypes
 ) {
 
-  public EndpointConfiguration.@Nullable Version getEndpoint(final String endpointName, final String versionName) {
+  public EndpointConfiguration.@Nullable Version endpoint(final String endpointName, final String versionName) {
     for (final EndpointConfiguration endpoint : this.endpoints) {
       if (endpoint.name().equals(endpointName)) {
         for (final EndpointConfiguration.Version version : endpoint.versions()) {

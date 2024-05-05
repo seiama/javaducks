@@ -81,7 +81,7 @@ public class JavadocService {
         }
       })
       .build(key -> {
-        final AppConfiguration.EndpointConfiguration.Version config = this.configuration.getEndpoint(key.project(), key.version());
+        final AppConfiguration.EndpointConfiguration.Version config = this.configuration.endpoint(key.project(), key.version());
         if (config != null) {
           return switch (config.type()) {
             case SNAPSHOT, RELEASE -> {
