@@ -38,7 +38,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.Snapshot;
@@ -63,7 +62,6 @@ public class JavadocService {
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
   private static final String MAVEN_METADATA = "maven-metadata.xml";
-  private final List<MavenHashType> hashTypes;
   private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
   private final LoadingCache<Key, FileSystem> contents;
@@ -71,7 +69,6 @@ public class JavadocService {
   @Autowired
   public JavadocService(final AppConfiguration configuration) {
     this.configuration = configuration;
-    this.hashTypes = configuration.hashTypes();
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
       .removalListener((RemovalListener<Key, FileSystem>) (key, value, cause) -> {
@@ -215,7 +212,7 @@ public class JavadocService {
   }
 
   public @Nullable MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri) {
-    for (final MavenHashType hashType : this.hashTypes) {
+    for (final MavenHashType hashType : this.configuration.hashTypes()) {
       final URI hashUri = UriComponentsBuilder.fromUri(jarUri).replacePath(jarUri.getPath() + "." + hashType.extension()).build().toUri();
       try {
         final ResponseEntity<String> response = this.restClient.get()

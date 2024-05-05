@@ -24,7 +24,6 @@
 package com.seiama.javaducks.util.exception;
 
 public class HashNotFoundException extends RuntimeException {
-
   public HashNotFoundException(final String project, final String version) {
     super("No valid hash file found for %s %s".formatted(project, version));
   }
