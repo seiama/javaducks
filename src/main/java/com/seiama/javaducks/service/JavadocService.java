@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import com.seiama.javaducks.util.exception.HashNotFoundException;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.io.IOException;
 import java.io.StringReader;
@@ -37,7 +38,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.Snapshot;
@@ -62,7 +62,6 @@ public class JavadocService {
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
   private static final String MAVEN_METADATA = "maven-metadata.xml";
-  private static final List<MavenHashType> HASH_TYPES = List.of(MavenHashType.SHA256, MavenHashType.SHA1);
   private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
   private final LoadingCache<Key, FileSystem> contents;
@@ -151,7 +150,7 @@ public class JavadocService {
         try {
           Files.createDirectories(versionPath.getParent());
         } catch (final IOException e) {
-          LOGGER.warn("Could not update javadoc for {} {}. Couldn't not create dir. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
+          LOGGER.warn("Could not update javadoc for {} {}. Couldn't create directory. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
           continue;
         }
 
@@ -169,9 +168,11 @@ public class JavadocService {
           LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
           continue;
         }
+
         if (hashPair == null) {
-          throw new RuntimeException("Could not download hash for " + config.name() + " " + version.name());
+          throw new HashNotFoundException(config.name(), version.name());
         }
+
         // check hash
         if (Files.isReadable(versionPath)) {
           try {
@@ -211,7 +212,7 @@ public class JavadocService {
   }
 
   public @Nullable MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri) {
-    for (final MavenHashType hashType : HASH_TYPES) {
+    for (final MavenHashType hashType : this.configuration.hashTypes()) {
       final URI hashUri = UriComponentsBuilder.fromUri(jarUri).replacePath(jarUri.getPath() + "." + hashType.extension()).build().toUri();
       try {
         final ResponseEntity<String> response = this.restClient.get()
@@ -224,8 +225,11 @@ public class JavadocService {
           return new MavenHashPair(response.getBody(), hashType);
         }
       } catch (final Exception e) {
-        // TODO: Should we log the full stack trace? Potentially only log the exception message under DEBUG level
-        LOGGER.warn("Could not download {} hash for {}. Url: {}, Exception: {}: {}", hashType, config.name(), hashUri, e.getClass().getName(), e.getMessage());
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("Could not download {} hash for {}. Url: {}, Exception: {}: {}", hashType, config.name(), hashUri, e.getClass().getName(), e.getMessage());
+        } else {
+          LOGGER.warn("Could not download {} hash for {}. Url: {}, Exception: {}", hashType, config.name(), hashUri, e.getClass().getName());
+        }
       }
     }
     return null;

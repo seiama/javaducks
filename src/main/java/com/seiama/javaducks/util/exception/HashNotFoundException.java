@@ -21,45 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration.properties;
+package com.seiama.javaducks.util.exception;
 
-import com.seiama.javaducks.util.maven.MavenHashType;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
-
-@ConfigurationProperties(prefix = "app")
-@NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints,
-  @DefaultValue({"SHA256", "SHA1"})
-  List<MavenHashType> hashTypes
-) {
-  @NullMarked
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    @NullMarked
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
-
-      @NullMarked
-      public enum Type {
-        SNAPSHOT,
-        RELEASE,
-      }
-    }
+public class HashNotFoundException extends RuntimeException {
+  public HashNotFoundException(final String project, final String version) {
+    super("No valid hash file found for %s %s".formatted(project, version));
   }
 }
