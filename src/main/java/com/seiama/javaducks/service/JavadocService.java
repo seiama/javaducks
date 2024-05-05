@@ -64,14 +64,14 @@ public class JavadocService {
   private static final String MAVEN_METADATA = "maven-metadata.xml";
   private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
-  private final LoadingCache<Key, FileSystem> contents;
+  private final LoadingCache<Key, CachedLookup> contents;
 
   @Autowired
   public JavadocService(final AppConfiguration configuration) {
     this.configuration = configuration;
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
-      .removalListener((RemovalListener<Key, FileSystem>) (key, value, cause) -> {
+      .removalListener((RemovalListener<Key, CachedLookup>) (key, value, cause) -> {
         if (value != null) {
           try {
             value.close();
@@ -81,16 +81,33 @@ public class JavadocService {
         }
       })
       .build(key -> {
-        final Path path = this.configuration.storage().resolve(key.project()).resolve(key.version() + ".jar");
-        if (Files.isRegularFile(path)) {
-          return FileSystems.newFileSystem(path);
+        final AppConfiguration.EndpointConfiguration.Version config = this.configuration.endpoint(key.project(), key.version());
+        if (config != null) {
+          return switch (config.type()) {
+            case SNAPSHOT, RELEASE -> {
+              final Path path = this.configuration.storage().resolve(key.project()).resolve(key.version() + ".jar");
+              if (Files.isRegularFile(path)) {
+                yield new CachedLookup(FileSystems.newFileSystem(path), null);
+              }
+              yield null;
+            }
+            case REDIRECT -> new CachedLookup(null, URI.create(config.path()));
+          };
         }
         return null;
       });
   }
 
-  public @Nullable FileSystem contentsFor(final Key key) {
-    return this.contents.get(key);
+  public @Nullable Result contentsFor(final Key key, final String path) {
+    final CachedLookup lookup = this.contents.get(key);
+    if (lookup != null) {
+      if (lookup.fs() != null) {
+        return new Result(lookup.fs().getPath(path), null);
+      } else if (lookup.uri() != null) {
+        return new Result(null, lookup.uri());
+      }
+    }
+    return null;
   }
 
   @Scheduled(
@@ -144,7 +161,15 @@ public class JavadocService {
             yield null;
           }
         }
+        case REDIRECT -> {
+          yield URI.create(version.path());
+        }
       };
+      if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT) {
+        LOGGER.debug("Javadoc for {} {} is a redirect and will not be updated", config.name(), version.name());
+        return;
+      }
+
       if (jar != null) {
         final Path versionPath = basePath.resolve(version.name() + ".jar");
         try {
@@ -246,6 +271,26 @@ public class JavadocService {
   public record MavenHashPair(
     String hash,
     MavenHashType type
+  ) {
+  }
+
+  @NullMarked
+  record CachedLookup(
+    @Nullable FileSystem fs,
+    @Nullable URI uri
+  ) implements AutoCloseable {
+    @Override
+    public void close() throws IOException {
+      if (this.fs != null) {
+        this.fs.close();
+      }
+    }
+  }
+
+  @NullMarked
+  public record Result(
+    @Nullable Path file,
+    @Nullable URI uri
   ) {
   }
 }

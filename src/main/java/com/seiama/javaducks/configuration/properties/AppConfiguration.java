@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -40,6 +41,20 @@ public record AppConfiguration(
   @DefaultValue({"SHA256", "SHA1"})
   List<MavenHashType> hashTypes
 ) {
+
+  public EndpointConfiguration.@Nullable Version endpoint(final String endpointName, final String versionName) {
+    for (final EndpointConfiguration endpoint : this.endpoints) {
+      if (endpoint.name().equals(endpointName)) {
+        for (final EndpointConfiguration.Version version : endpoint.versions()) {
+          if (version.name().equals(versionName)) {
+            return version;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   @NullMarked
   public record EndpointConfiguration(
     String name,
@@ -59,6 +74,7 @@ public record AppConfiguration(
       public enum Type {
         SNAPSHOT,
         RELEASE,
+        REDIRECT,
       }
     }
   }

@@ -26,7 +26,6 @@ package com.seiama.javaducks.controller;
 import com.seiama.javaducks.service.JavadocService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -91,29 +90,35 @@ public class JavadocController {
     @PathVariable final String version
   ) {
     final String root = "/%s/%s".formatted(project, version);
-    //noinspection resource - This warning can be ignored, we want to keep this FS open.
-    final @Nullable FileSystem fs = this.service.contentsFor(new JavadocService.Key(project, version));
-    if (fs != null) {
-      String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
-      if (path.equals("/")) {
-        path = "index.html";
-      }
-      final Path file = fs.getPath(path);
-      if (Files.isRegularFile(file)) {
-        return ok()
-          .cacheControl(STATICS_PATTERN.matcher(path).find() ? STATICS_CACHE_CONTROL : CACHE_CONTROL)
-          .headers(headers -> {
-            headers.setContentDisposition(CONTENT_DISPOSITION);
-            headers.set("X-JavaDucks", "Quack");
-            final String name = file.getFileName().toString();
-            for (final Map.Entry<String, MediaType> entry : MEDIATYPES.entrySet()) {
-              if (name.endsWith(entry.getKey())) {
-                headers.setContentType(entry.getValue());
-                break;
+    String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
+    if (path.equals("/")) {
+      path = "index.html";
+    }
+    final JavadocService.@Nullable Result result = this.service.contentsFor(new JavadocService.Key(project, version), path);
+    if (result != null) {
+      final Path file = result.file();
+      final URI uri = result.uri();
+      if (uri != null) {
+        return status(HttpStatus.FOUND)
+          .location(uri)
+          .build();
+      } else if (file != null) {
+        if (Files.isRegularFile(file)) {
+          return ok()
+            .cacheControl(STATICS_PATTERN.matcher(path).find() ? STATICS_CACHE_CONTROL : CACHE_CONTROL)
+            .headers(headers -> {
+              headers.setContentDisposition(CONTENT_DISPOSITION);
+              headers.set("X-JavaDucks", "Quack");
+              final String name = file.getFileName().toString();
+              for (final Map.Entry<String, MediaType> entry : MEDIATYPES.entrySet()) {
+                if (name.endsWith(entry.getKey())) {
+                  headers.setContentType(entry.getValue());
+                  break;
+                }
               }
-            }
-          })
-          .body(new FileSystemResource(file));
+            })
+            .body(new FileSystemResource(file));
+        }
       }
     }
     return notFound()
