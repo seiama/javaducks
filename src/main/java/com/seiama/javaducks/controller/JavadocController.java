@@ -24,9 +24,9 @@
 package com.seiama.javaducks.controller;
 
 import com.seiama.javaducks.service.JavadocService;
+import com.seiama.javaducks.util.FileSystemOrURI;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -92,13 +92,17 @@ public class JavadocController {
   ) {
     final String root = "/%s/%s".formatted(project, version);
     //noinspection resource - This warning can be ignored, we want to keep this FS open.
-    final @Nullable FileSystem fs = this.service.contentsFor(new JavadocService.Key(project, version));
-    if (fs != null) {
+    final @Nullable FileSystemOrURI fileSystemOrURI = this.service.contentsFor(new JavadocService.Key(project, version));
+    if (fileSystemOrURI.isUri()) {
+      return status(HttpStatus.FOUND)
+        .location(fileSystemOrURI.uri())
+        .build();
+    } else if (fileSystemOrURI.isFileSystem()) {
       String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
       if (path.equals("/")) {
         path = "index.html";
       }
-      final Path file = fs.getPath(path);
+      final Path file = fileSystemOrURI.fileSystem().getPath(path);
       if (Files.isRegularFile(file)) {
         return ok()
           .cacheControl(STATICS_PATTERN.matcher(path).find() ? STATICS_CACHE_CONTROL : CACHE_CONTROL)

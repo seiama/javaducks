@@ -21,46 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration.properties;
+package com.seiama.javaducks.util;
 
-import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
-import java.nio.file.Path;
-import java.util.List;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.DefaultValue;
+import java.nio.file.FileSystem;
 
-@ConfigurationProperties(prefix = "app")
-@NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  Path storage,
-  List<EndpointConfiguration> endpoints,
-  @DefaultValue({"SHA256", "SHA1"})
-  List<MavenHashType> hashTypes
-) {
-  @NullMarked
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    @NullMarked
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
+//@UnknownNullability
+public record FileSystemOrURI(FileSystem fileSystem, URI uri) {
 
-      @NullMarked
-      public enum Type {
-        SNAPSHOT,
-        RELEASE,
-        REDIRECT,
-      }
-    }
+  public boolean isFileSystem() {
+    return this.fileSystem != null;
+  }
+
+  public boolean isUri() {
+    return this.uri != null;
   }
 }
