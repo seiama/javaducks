@@ -43,6 +43,7 @@ spotless {
     endWithNewline()
     importOrderFile(rootProject.file(".spotless/seiama.importorder"))
     indentWithSpaces(2)
+    removeUnusedImports()
     licenseHeaderFile(rootProject.file("license_header.txt"))
     trimTrailingWhitespace()
     targetExclude("build/generated/**/*.java")
