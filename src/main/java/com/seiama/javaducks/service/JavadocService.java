@@ -101,10 +101,10 @@ public class JavadocService {
   public @Nullable Result contentsFor(final Key key, final String path) {
     final CachedLookup lookup = this.contents.get(key);
     if (lookup != null) {
-      if (lookup.fs != null) {
-        return new Result(lookup.fs.getPath(path), null);
-      } else if (lookup.uri != null) {
-        return new Result(null, lookup.uri);
+      if (lookup.fs() != null) {
+        return new Result(lookup.fs().getPath(path), null);
+      } else if (lookup.uri() != null) {
+        return new Result(null, lookup.uri());
       }
     }
     return null;
