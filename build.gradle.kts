@@ -157,4 +157,7 @@ tasks {
   checkstyleAot {
     isEnabled = false
   }
+  checkstyleAotTest {
+    isEnabled = false
+  }
 }

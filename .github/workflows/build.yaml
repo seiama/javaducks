@@ -25,3 +25,11 @@ jobs:
         uses: "./.github/actions/setup-env/"
       - name: "build"
         run: ./gradlew build
+      - name: "upload test results"
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/

@@ -1,0 +1,20 @@
+app:
+  root-redirect: 'https://papermc.io/javadocs'
+  storage: './run/'
+  endpoints:
+    - name: 'paper'
+      versions:
+        - name: '1.12'
+          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.12.2-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.20'
+          path: '/paper/1.20.4/'
+          type: 'REDIRECT'
+        - name: '1.20.4'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.4-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+    - name: 'paperlib'
+      versions:
+        - name: '1.0.8'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paperlib/1.0.8/paperlib-1.0.8-javadoc.jar'
+          type: 'RELEASE'
