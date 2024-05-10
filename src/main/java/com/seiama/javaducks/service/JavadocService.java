@@ -167,7 +167,7 @@ public class JavadocService {
       };
       if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT) {
         LOGGER.debug("Javadoc for {} {} is a redirect and will not be updated", config.name(), version.name());
-        return;
+        continue;
       }
 
       if (jar != null) {
@@ -182,7 +182,7 @@ public class JavadocService {
         // don't download again if it's a release
         if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE && Files.exists(versionPath)) {
           LOGGER.debug("Javadoc for {} {} is a release and will not be updated", config.name(), version.name());
-          return;
+          continue;
         }
 
         // get hash
