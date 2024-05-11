@@ -27,17 +27,21 @@ import com.seiama.javaducks.service.JavadocService;
 import com.seiama.javaducks.service.javadoc.JavadocInjector;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
@@ -71,11 +75,17 @@ public class JavadocController {
   );
   private final JavadocService service;
   private final JavadocInjector injector;
+  private final String redirectTemplate;
 
   @Autowired
   public JavadocController(final JavadocService service, final JavadocInjector injector) {
     this.service = service;
     this.injector = injector;
+    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource("redirect.html").getInputStream()))) {
+      this.redirectTemplate = reader.lines().collect(Collectors.joining("\n"));
+    } catch (final Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @GetMapping("/{project:[a-z]+}/{version:[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?}")
@@ -107,8 +117,10 @@ public class JavadocController {
     if (result != null) {
       final Path file = result.file();
       final URI uri = result.uri();
+      final String redirect = result.redirect();
       if (uri != null) {
         return status(HttpStatus.FOUND)
+          .header("X-JavaDucks", "Quack")
           .location(uri)
           .build();
       } else if (file != null) {
@@ -128,6 +140,16 @@ public class JavadocController {
             })
             .body(this.injector.runInjections(file, key));
         }
+      } else if (redirect != null) {
+        String newFull = request.getRequestURI().replace(root + "/", redirect);
+        if (request.getQueryString() != null) {
+          newFull += "?" + request.getQueryString();
+        }
+        return ok()
+          .cacheControl(STATICS_CACHE_CONTROL)
+          .contentType(MediaType.TEXT_HTML)
+          .header("X-JavaDucks", "Quack")
+          .body(this.redirectTemplate.formatted(root + "/", redirect, newFull));
       }
     }
     return notFound()
