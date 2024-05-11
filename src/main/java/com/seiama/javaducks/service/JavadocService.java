@@ -117,126 +117,124 @@ public class JavadocService {
   )
   public void refreshAll() {
     for (final AppConfiguration.EndpointConfiguration endpoint : this.configuration.endpoints()) {
-      this.refreshOne(endpoint);
+      this.refreshEndpoint(endpoint);
     }
   }
 
-  private void refreshOne(final AppConfiguration.EndpointConfiguration config) {
-    final Path basePath = this.configuration.storage().resolve(config.name());
-    for (final AppConfiguration.EndpointConfiguration.Version version : config.versions()) {
-      final @Nullable URI jar = switch (version.type()) {
-        case RELEASE -> {
-          yield URI.create(version.path());
-        }
-        case SNAPSHOT -> {
-          final URI metaDataUri = version.asset(MAVEN_METADATA);
-          final Metadata metadata;
-          try {
-            final ResponseEntity<String> response = this.restClient.get()
-              .uri(metaDataUri)
-              .header(HttpHeaders.USER_AGENT, USER_AGENT)
-              .retrieve()
-              .toEntity(String.class);
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-              LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
-              yield null;
-            }
-            final MetadataXpp3Reader reader = new MetadataXpp3Reader();
-            metadata = reader.read(new StringReader(response.getBody()), true);
-          } catch (final Exception e) {
-            LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
-            yield null;
-          }
-          final @Nullable Snapshot snapshot = metadata.getVersioning().getSnapshot();
-          if (snapshot != null) {
-            yield version.asset(String.format(
-              "%s-%s-%s-%d-javadoc.jar",
-              metadata.getArtifactId(),
-              metadata.getVersion().replace("-SNAPSHOT", ""),
-              snapshot.getTimestamp(),
-              snapshot.getBuildNumber()
-            ));
-          } else {
-            LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
-            yield null;
-          }
-        }
-        case REDIRECT -> {
-          yield URI.create(version.path());
-        }
-      };
-      if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT) {
-        LOGGER.debug("Javadoc for {} {} is a redirect and will not be updated", config.name(), version.name());
-        return;
-      }
+  private void refreshEndpoint(final AppConfiguration.EndpointConfiguration endpoint) {
+    final Path basePath = this.configuration.storage().resolve(endpoint.name());
+    for (final AppConfiguration.EndpointConfiguration.Version version : endpoint.versions()) {
+      this.refreshVersion(endpoint, version, basePath);
+    }
+  }
 
-      if (jar != null) {
-        final Path versionPath = basePath.resolve(version.name() + ".jar");
-        try {
-          Files.createDirectories(versionPath.getParent());
-        } catch (final IOException e) {
-          LOGGER.warn("Could not update javadoc for {} {}. Couldn't create directory. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
-          continue;
-        }
+  private void refreshVersion(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final Path basePath) {
+    final URI jar = this.resolveUriFor(config, version);
+    if (jar == null) return;
 
-        // don't download again if it's a release
-        if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE && Files.exists(versionPath)) {
-          LOGGER.debug("Javadoc for {} {} is a release and will not be updated", config.name(), version.name());
+    if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT) {
+      LOGGER.debug("Javadoc for {} {} is a redirect and will not be updated", config.name(), version.name());
+      return;
+    }
+
+    final Path versionPath = basePath.resolve(version.name() + ".jar");
+    try {
+      Files.createDirectories(versionPath.getParent());
+    } catch (final IOException e) {
+      LOGGER.warn("Could not update javadoc for {} {}. Couldn't create directory. Exception: {}: {}", config.name(), version.name(), e.getClass().getName(), e.getMessage());
+      return;
+    }
+
+    // don't download again if it's a release
+    if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE && Files.exists(versionPath)) {
+      LOGGER.debug("Javadoc for {} {} is a release and will not be updated", config.name(), version.name());
+      return;
+    }
+
+    // get hash
+    final MavenHashPair hashPair = this.downloadHash(config, jar, version);
+
+    // check hash
+    if (Files.isReadable(versionPath)) {
+      try {
+        final String hashOnDisk = hashPair.type().algorithm().hash(versionPath).toString();
+        if (hashOnDisk.equals(hashPair.hash())) {
+          LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
           return;
         }
-
-        // get hash
-        final MavenHashPair hashPair;
-        try {
-          hashPair = this.downloadHash(config, jar);
-        } catch (final Exception e) {
-          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download hash. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
-          continue;
-        }
-
-        if (hashPair == null) {
-          throw new HashNotFoundException(config.name(), version.name());
-        }
-
-        // check hash
-        if (Files.isReadable(versionPath)) {
-          try {
-            final String hashOnDisk = hashPair.type().algorithm().hash(versionPath).toString();
-            if (hashOnDisk.equals(hashPair.hash())) {
-              LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
-              continue;
-            }
-          } catch (final IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-        // download jar
-        try {
-          final ResponseEntity<byte[]> response = this.restClient.get()
-            .uri(jar)
-            .header(HttpHeaders.USER_AGENT, USER_AGENT)
-            .retrieve()
-            .toEntity(byte[].class);
-          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
-            continue;
-          }
-          final String downloadedHash = hashPair.type().algorithm().hash(response.getBody()).toString();
-          if (!downloadedHash.equals(hashPair.hash())) {
-            LOGGER.warn("Could not update javadoc for {} {}. {} Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.type(), hashPair.hash(), downloadedHash);
-            continue;
-          }
-          Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (final Exception e) {
-          LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
-          continue;
-        }
-        LOGGER.info("Updated javadoc for {} {}", config.name(), version.name());
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
       }
     }
+
+    this.downloadJar(config, version, jar, hashPair, versionPath);
   }
 
-  public @Nullable MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri) {
+  private void downloadJar(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final URI jar, final MavenHashPair hashPair, final Path versionPath) {
+    try {
+      final ResponseEntity<byte[]> response = this.restClient.get()
+        .uri(jar)
+        .header(HttpHeaders.USER_AGENT, USER_AGENT)
+        .retrieve()
+        .toEntity(byte[].class);
+      if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+        LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
+        return;
+      }
+      final String downloadedHash = hashPair.type().algorithm().hash(response.getBody()).toString();
+      if (!downloadedHash.equals(hashPair.hash())) {
+        LOGGER.warn("Could not update javadoc for {} {}. {} Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.type(), hashPair.hash(), downloadedHash);
+        return;
+      }
+      Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+    } catch (final Exception e) {
+      LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
+      return;
+    }
+    LOGGER.info("Updated javadoc for {} {}", config.name(), version.name());
+  }
+
+  private @Nullable URI resolveUriFor(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version) {
+    return switch (version.type()) {
+      case RELEASE, REDIRECT -> URI.create(version.path());
+      case SNAPSHOT -> {
+        final URI metaDataUri = version.asset(MAVEN_METADATA);
+        final Metadata metadata;
+        try {
+          final ResponseEntity<String> response = this.restClient.get()
+            .uri(metaDataUri)
+            .header(HttpHeaders.USER_AGENT, USER_AGENT)
+            .retrieve()
+            .toEntity(String.class);
+          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
+            yield null;
+          }
+          final MetadataXpp3Reader reader = new MetadataXpp3Reader();
+          metadata = reader.read(new StringReader(response.getBody()), true);
+        } catch (final Exception e) {
+          LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
+          yield null;
+        }
+
+        final @Nullable Snapshot snapshot = metadata.getVersioning().getSnapshot();
+        if (snapshot != null) {
+          yield version.asset(String.format(
+            "%s-%s-%s-%d-javadoc.jar",
+            metadata.getArtifactId(),
+            metadata.getVersion().replace("-SNAPSHOT", ""),
+            snapshot.getTimestamp(),
+            snapshot.getBuildNumber()
+          ));
+        } else {
+          LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
+          yield null;
+        }
+      }
+    };
+  }
+
+  public MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri, final AppConfiguration.EndpointConfiguration.Version version) {
     for (final MavenHashType hashType : this.configuration.hashTypes()) {
       final URI hashUri = UriComponentsBuilder.fromUri(jarUri).replacePath(jarUri.getPath() + "." + hashType.extension()).build().toUri();
       try {
@@ -257,7 +255,7 @@ public class JavadocService {
         }
       }
     }
-    return null;
+    throw new HashNotFoundException(config.name(), version.name());
   }
 
   @NullMarked

@@ -61,7 +61,8 @@ public class JavadocController {
   private static final Map<String, MediaType> MEDIATYPES = Map.of(
     ".css", MediaType.parseMediaType("text/css"),
     ".js", MediaType.parseMediaType("application/javascript"),
-    ".zip", MediaType.parseMediaType("application/zip")
+    ".zip", MediaType.parseMediaType("application/zip"),
+    ".html", MediaType.parseMediaType("text/html")
   );
   private final JavadocService service;
 
