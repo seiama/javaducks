@@ -25,7 +25,6 @@ package com.seiama.javaducks.configuration.properties;
 
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import org.jspecify.annotations.NullMarked;
