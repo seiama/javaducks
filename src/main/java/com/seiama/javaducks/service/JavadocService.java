@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import com.seiama.javaducks.service.javadoc.JavadocKey;
 import com.seiama.javaducks.util.exception.HashNotFoundException;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.io.IOException;
@@ -64,14 +65,14 @@ public class JavadocService {
   private static final String MAVEN_METADATA = "maven-metadata.xml";
   private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
-  private final LoadingCache<Key, CachedLookup> contents;
+  private final LoadingCache<JavadocKey, CachedLookup> contents;
 
   @Autowired
   public JavadocService(final AppConfiguration configuration) {
     this.configuration = configuration;
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
-      .removalListener((RemovalListener<Key, CachedLookup>) (key, value, cause) -> {
+      .removalListener((RemovalListener<JavadocKey, CachedLookup>) (key, value, cause) -> {
         if (value != null) {
           try {
             value.close();
@@ -98,7 +99,7 @@ public class JavadocService {
       });
   }
 
-  public @Nullable Result contentsFor(final Key key, final String path) {
+  public @Nullable Result contentsFor(final JavadocKey key, final String path) {
     final CachedLookup lookup = this.contents.get(key);
     if (lookup != null) {
       if (lookup.fs() != null) {
@@ -108,6 +109,10 @@ public class JavadocService {
       }
     }
     return null;
+  }
+
+  public Path faviconFor(final String project) {
+    return this.configuration.storage().resolve(project).resolve("favicon.ico");
   }
 
   @Scheduled(
@@ -256,13 +261,6 @@ public class JavadocService {
       }
     }
     throw new HashNotFoundException(config.name(), version.name());
-  }
-
-  @NullMarked
-  public record Key(
-    String project,
-    String version
-  ) {
   }
 
   @NullMarked
