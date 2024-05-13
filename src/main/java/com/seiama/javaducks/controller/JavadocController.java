@@ -24,6 +24,8 @@
 package com.seiama.javaducks.controller;
 
 import com.seiama.javaducks.service.JavadocService;
+import com.seiama.javaducks.service.javadoc.JavadocInjector;
+import com.seiama.javaducks.service.javadoc.JavadocKey;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.file.Files;
@@ -33,6 +35,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.CacheControl;
@@ -53,6 +57,7 @@ import static org.springframework.http.ResponseEntity.status;
 @Controller
 @NullMarked
 public class JavadocController {
+  private static final Logger LOGGER = LoggerFactory.getLogger(JavadocController.class);
   // https://regex101.com/r/fyzJ7g/1
   private static final Pattern STATICS_PATTERN = Pattern.compile("^(?!.*search-index).*\\.(js|png|css|html)$");
   private static final CacheControl CACHE_CONTROL = CacheControl.maxAge(Duration.ofMinutes(10));
@@ -65,10 +70,12 @@ public class JavadocController {
     ".html", MediaType.parseMediaType("text/html")
   );
   private final JavadocService service;
+  private final JavadocInjector injector;
 
   @Autowired
-  public JavadocController(final JavadocService service) {
+  public JavadocController(final JavadocService service, final JavadocInjector injector) {
     this.service = service;
+    this.injector = injector;
   }
 
   @GetMapping("/{project:[a-z]+}/{version:[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?}")
@@ -95,7 +102,8 @@ public class JavadocController {
     if (path.equals("/")) {
       path = "index.html";
     }
-    final JavadocService.@Nullable Result result = this.service.contentsFor(new JavadocService.Key(project, version), path);
+    final JavadocKey key = new JavadocKey(project, version);
+    final JavadocService.@Nullable Result result = this.service.contentsFor(key, path);
     if (result != null) {
       final Path file = result.file();
       final URI uri = result.uri();
@@ -118,12 +126,29 @@ public class JavadocController {
                 }
               }
             })
-            .body(new FileSystemResource(file));
+            .body(this.injector.runInjections(file, key));
         }
       }
     }
     return notFound()
       .cacheControl(CacheControl.noCache())
       .build();
+  }
+
+  @GetMapping("/{project:[a-z]+}/favicon.ico")
+  @ResponseBody
+  public ResponseEntity<?> serveFavicon(@PathVariable final String project) {
+    final Path favicon = this.service.faviconFor(project);
+    if (Files.isReadable(favicon)) {
+      return ok()
+        .cacheControl(STATICS_CACHE_CONTROL)
+        .headers(headers -> headers.setContentType(MediaType.parseMediaType("image/x-icon")))
+        .body(new FileSystemResource(favicon));
+    } else {
+      LOGGER.warn("Did not find favicon for project {}", project);
+      return notFound()
+        .cacheControl(CacheControl.noCache())
+        .build();
+    }
   }
 }

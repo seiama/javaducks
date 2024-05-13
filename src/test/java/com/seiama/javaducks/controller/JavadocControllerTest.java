@@ -24,6 +24,8 @@
 package com.seiama.javaducks.controller;
 
 import com.seiama.javaducks.service.JavadocService;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -105,5 +108,52 @@ public class JavadocControllerTest {
       .andExpect(status().isOk())
       .andExpect(content().contentType("application/javascript"))
       .andExpect(content().string(containsString("Please contact Oracle")));
+  }
+
+  @Test
+  void testDuckInjection() throws Exception {
+    this.mockMvc.perform(get("/paper/1.12/"))
+      .andExpect(status().isOk())
+      // test the water of the duck exists
+      .andExpect(content().string(containsString("<!--   ~'`~'`~'`~'`~           |__/                                                  -->")));
+  }
+
+  @Test
+  void testOutdatedBannerInjection() throws Exception {
+    this.mockMvc.perform(get("/paper/1.12/overview-summary.html"))
+      .andExpect(status().isOk())
+      .andExpect(content().string(containsString("location.href.replace('paper/1.12/', 'paper/1.20.4/')")));
+  }
+
+  @Test
+  void testOutdatedBannerInjectionLatest() throws Exception {
+    this.mockMvc.perform(get("/paper/1.20.4/overview-summary.html"))
+      .andExpect(status().isOk())
+      .andExpect(content().string(not(containsString("outdated-banner"))));
+  }
+
+  @Test
+  void testFaviconInjection() throws Exception {
+    this.mockMvc.perform(get("/paper/1.12/"))
+      .andExpect(status().isOk())
+      .andExpect(content().string(containsString("<link rel=\"icon\" href=\"/paper/favicon.ico\" />")));
+  }
+
+  @Test
+  void testFavicon() throws Exception {
+    // "mock" favicon
+    final Path favicon = this.javadocService.faviconFor("paper");
+    Files.createDirectories(favicon.getParent());
+    Files.write(favicon, "duck".getBytes());
+
+    this.mockMvc.perform(get("/paper/favicon.ico"))
+      .andExpect(status().isOk())
+      .andExpect(content().contentType("image/x-icon"));
+  }
+
+  @Test
+  void testMissingFavicon() throws Exception {
+    this.mockMvc.perform(get("/paperlib/favicon.ico"))
+      .andExpect(status().isNotFound());
   }
 }
