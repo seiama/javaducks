@@ -118,6 +118,8 @@ dependencies {
   implementation(libs.guava)
   implementation(libs.caffeine)
   implementation(libs.mavenRepositoryMetadata)
+  implementation(libs.springdoc.openapi.starter.webmvc.ui)
+  implementation("org.springframework.boot", "spring-boot-starter-validation")
   implementation("org.springframework.boot:spring-boot-starter-actuator")
   implementation("org.springframework.boot:spring-boot-starter-web")
   testImplementation("org.springframework.boot:spring-boot-starter-test") {

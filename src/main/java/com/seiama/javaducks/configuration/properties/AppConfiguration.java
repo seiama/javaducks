@@ -25,6 +25,7 @@ package com.seiama.javaducks.configuration.properties;
 
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import org.jspecify.annotations.NullMarked;
@@ -36,6 +37,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @NullMarked
 public record AppConfiguration(
   URI rootRedirect,
+  URI apiBaseUrl,
+  String apiTitle,
+  String apiVersion,
   Path storage,
   List<EndpointConfiguration> endpoints,
   @DefaultValue({"SHA256", "SHA1"})
@@ -66,6 +70,8 @@ public record AppConfiguration(
       String path,
       Type type
     ) {
+      public static final String PATTERN = "[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?";
+
       public URI asset(final String name) {
         return URI.create(this.path + name);
       }

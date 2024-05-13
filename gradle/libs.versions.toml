@@ -18,3 +18,4 @@ guava = { module = "com.google.guava:guava", version = "33.1.0-jre" }
 jspecify = { module = "org.jspecify:jspecify", version = "0.3.0" }
 mavenRepositoryMetadata = { module = "org.apache.maven:maven-repository-metadata", version = "3.9.6" }
 stylecheck = { module = "ca.stellardrift:stylecheck", version = "0.2.1" }
+springdoc-openapi-starter-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version = "2.5.0" }
