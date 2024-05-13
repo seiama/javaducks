@@ -25,6 +25,7 @@ package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.model.Project;
+import com.seiama.javaducks.model.Version;
 import com.seiama.javaducks.util.HTTP;
 import com.seiama.javaducks.util.exception.ProjectNotFound;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,22 +72,25 @@ public final class ProjectController {
     @Pattern(regexp = "[a-z]+") //
     final String projectName
   ) {
-    final Project project = new Project(this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new));
+    final Project project = new Project("papermc", this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), "b");
     final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(ProjectNotFound::new).versions();
     return HTTP.cachedOk(ProjectResponse.from(project, versions), CACHE);
   }
 
   @Schema
   private record ProjectResponse(
+    @Schema(name = "ok")
+    boolean ok,
     @Schema(name = "project", pattern = "[a-z]+", example = "paper")
-    String project,
+    Project project,
     @Schema(name = "versions")
-    List<String> versions
+    List<Version> versions
   ) {
     static ProjectResponse from(final Project project, final List<AppConfiguration.EndpointConfiguration.Version> versions) {
       return new ProjectResponse(
-        project.name(),
-        versions.stream().map(AppConfiguration.EndpointConfiguration.Version::name).toList()
+        true,
+        project,
+        versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()
       );
     }
   }

@@ -60,17 +60,19 @@ public final class ProjectsController {
   @GetMapping("/api/v1/projects")
   @Operation(summary = "Gets a list of all available projects.")
   public ResponseEntity<?> projects() {
-    final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> new Project(endpoint.name())).toList();
+    final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> new Project("papermc", endpoint.name(), "b")).toList();
     return HTTP.cachedOk(ProjectsResponse.from(projects), CACHE);
   }
 
   @Schema
   private record ProjectsResponse(
+    @Schema(name = "ok")
+    boolean ok,
     @Schema(name = "projects")
-    List<String> projects
+    List<Project> projects
   ) {
-    static ProjectsResponse from(final List<Project> projects) {
-      return new ProjectsResponse(projects.stream().map(Project::name).toList());
+    static ProjectsResponse from(final List<Project> projectsList) {
+      return new ProjectsResponse(true, projectsList);
     }
   }
 }

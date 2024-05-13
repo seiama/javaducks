@@ -23,13 +23,9 @@
  */
 package com.seiama.javaducks.model;
 
-import org.jspecify.annotations.NullMarked;
+import java.util.List;
 
-@NullMarked
-public record Project(
-  String namespace,
-  String name,
-  String displayName
+public record Versions(
+  List<Version> versions
 ) {
-
 }

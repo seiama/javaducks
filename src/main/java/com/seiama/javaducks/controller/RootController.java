@@ -24,6 +24,7 @@
 package com.seiama.javaducks.controller;
 
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import io.swagger.v3.oas.annotations.Operation;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,7 @@ public class RootController {
   }
 
   @GetMapping("/")
+  @Operation(summary = "Redirect to the root domain")
   public ResponseEntity<?> redirectToDocs() {
     return ResponseEntity.status(HttpStatus.FOUND)
       .location(this.configuration.rootRedirect())

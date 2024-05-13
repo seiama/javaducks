@@ -23,13 +23,14 @@
  */
 package com.seiama.javaducks.model;
 
-import org.jspecify.annotations.NullMarked;
+import java.net.URI;
 
-@NullMarked
-public record Project(
-  String namespace,
+public record Version(
   String name,
-  String displayName
+  Javadocs javadocs
 ) {
 
+  public record Javadocs(
+    URI url
+  ) { }
 }
