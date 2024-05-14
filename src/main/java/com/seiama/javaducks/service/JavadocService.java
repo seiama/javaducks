@@ -28,7 +28,10 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
+import com.seiama.javaducks.service.maven.MavenService;
+import com.seiama.javaducks.service.maven.request.ArtifactRequest;
 import com.seiama.javaducks.util.exception.HashNotFoundException;
+import com.seiama.javaducks.util.maven.MavenConstants;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.io.IOException;
 import java.io.StringReader;
@@ -66,10 +69,12 @@ public class JavadocService {
   private final RestClient restClient = RestClient.create();
   private final AppConfiguration configuration;
   private final LoadingCache<JavadocKey, CachedLookup> contents;
+  private final MavenService mavenService;
 
   @Autowired
-  public JavadocService(final AppConfiguration configuration) {
+  public JavadocService(final AppConfiguration configuration, final MavenService mavenService) {
     this.configuration = configuration;
+    this.mavenService = mavenService;
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
       .removalListener((RemovalListener<JavadocKey, CachedLookup>) (key, value, cause) -> {
@@ -129,11 +134,28 @@ public class JavadocService {
   private void refreshEndpoint(final AppConfiguration.EndpointConfiguration endpoint) {
     final Path basePath = this.configuration.storage().resolve(endpoint.name());
     for (final AppConfiguration.EndpointConfiguration.Version version : endpoint.versions()) {
+      System.out.println("VERSION REGEX SPLIT HERE!!!: " + version.path());
       this.refreshVersion(endpoint, version, basePath);
     }
   }
 
   private void refreshVersion(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final Path basePath) {
+    // Download using MavenServiceen
+    final String[] versionRegex = version.path().split(":");
+    System.out.println("VERSION REGEX SPLIT HERE!!!: " + version.path() + " " + versionRegex[0] + " " + versionRegex[1] + " " + versionRegex[2]);
+    final byte[] result = this.mavenService.artifactFor("papermc", new ArtifactRequest(
+      versionRegex[0],
+      versionRegex[1],
+      versionRegex[2],
+      null,
+      null,
+      MavenConstants.CLASSIFIER_JAVADOC,
+      MavenConstants.EXTENSION_JAR,
+      null,
+      null
+    ));
+
+    if (true) return;
     final URI jar = this.resolveUriFor(config, version);
     if (jar == null) return;
 
@@ -173,6 +195,7 @@ public class JavadocService {
     }
 
     this.downloadJar(config, version, jar, hashPair, versionPath);
+
   }
 
   private void downloadJar(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final URI jar, final MavenHashPair hashPair, final Path versionPath) {

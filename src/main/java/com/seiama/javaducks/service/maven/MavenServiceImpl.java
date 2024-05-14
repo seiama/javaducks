@@ -105,6 +105,7 @@ class MavenServiceImpl implements MavenService {
     final String url,
     final @Nullable Duration lifetime
   ) {
+    System.out.println("URL HERE!!!!:" + url);
     if (repository != null) {
       if (repository instanceof final MavenConfiguration.Repositories.Group group) {
         for (final String member : group.members()) {
