@@ -58,7 +58,7 @@ public record AppConfiguration(
 
   public @Nullable Project projectFromNamespace(final String namespace, final String projectName) {
     final Map<String, Project> projects = this.projects.get(namespace);
-    return projects == null ? null : projects.get(projectName);
+    return projects == null ? null : projects.get(projectName); // Could also return a dummy project with an empty namespace and displayName
   }
 
   public EndpointConfiguration.@Nullable Version endpoint(final String endpointName, final String versionName) {
