@@ -76,7 +76,8 @@ public final class VersionController {
     @Pattern(regexp = AppConfiguration.EndpointConfiguration.Version.PATTERN) //
     final String versionName
   ) {
-    final Project project = new Project("papermc", this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), "b");
+    final String namespace = this.configuration.namespaceFromProjectName(projectName);
+    final Project project = new Project(namespace, this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), this.configuration.projectFromNamespace(namespace, projectName).displayName());
     final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(VersionNotFound::new).versions().stream().filter(v -> v.name().equals(versionName)).findFirst().orElseThrow(VersionNotFound::new);
     return HTTP.cachedOk(VersionResponse.from(project, version, this.configuration), CACHE);
   }

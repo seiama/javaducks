@@ -27,6 +27,7 @@ import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -41,9 +42,24 @@ public record AppConfiguration(
   String apiVersion,
   Path storage,
   List<EndpointConfiguration> endpoints,
+  Map<String, Map<String, Project>> projects,
   @DefaultValue({"SHA256", "SHA1"})
   List<MavenHashType> hashTypes
 ) {
+
+  public @Nullable String namespaceFromProjectName(final String projectName) {
+    for (final Map.Entry<String, Map<String, Project>> entry : this.projects.entrySet()) {
+      if (entry.getValue().containsKey(projectName)) {
+        return entry.getKey();
+      }
+    }
+    return null;
+  }
+
+  public @Nullable Project projectFromNamespace(final String namespace, final String projectName) {
+    final Map<String, Project> projects = this.projects.get(namespace);
+    return projects == null ? null : projects.get(projectName);
+  }
 
   public EndpointConfiguration.@Nullable Version endpoint(final String endpointName, final String versionName) {
     for (final EndpointConfiguration endpoint : this.endpoints) {
@@ -57,6 +73,11 @@ public record AppConfiguration(
     }
     return null;
   }
+
+  @NullMarked
+  public record Project(
+    String displayName
+  ) { }
 
   @NullMarked
   public record EndpointConfiguration(

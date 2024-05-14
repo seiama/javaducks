@@ -61,7 +61,10 @@ public final class ProjectsController {
   @GetMapping("/api/v1/projects")
   @Operation(summary = "Gets a list of all available projects.")
   public ResponseEntity<?> projects() {
-    final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> new Project("papermc", endpoint.name(), "b")).toList();
+    final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> {
+      final String namespace = this.configuration.namespaceFromProjectName(endpoint.name());
+      return new Project(namespace, endpoint.name(), this.configuration.projectFromNamespace(namespace, endpoint.name()).displayName());
+    }).toList();
     return HTTP.cachedOk(ProjectsResponse.success(projects), CACHE);
   }
 }

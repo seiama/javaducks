@@ -6,6 +6,16 @@ app:
 
   api-title: "JavaDucks API"
   api-version: "v1"
+  projects:
+    papermc: # this is the namespace
+      folia:
+        display-name: "Folia"
+      paper:
+        display-name: "Paper"
+      velocity:
+        display-name: "Velocity"
+
+
   endpoints:
     - name: 'folia'
       versions:

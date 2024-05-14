@@ -73,7 +73,8 @@ public final class ProjectController {
     @Pattern(regexp = "[a-z]+") //
     final String projectName
   ) {
-    final Project project = new Project("papermc", this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), "b");
+    final String namespace = this.configuration.namespaceFromProjectName(projectName);
+    final Project project = new Project(namespace, this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), this.configuration.projectFromNamespace(namespace, projectName).displayName());
     final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(ProjectNotFound::new).versions();
     return HTTP.cachedOk(ProjectResponse.from(project, versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()), CACHE);
   }
