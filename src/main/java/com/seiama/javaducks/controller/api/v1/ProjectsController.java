@@ -23,8 +23,9 @@
  */
 package com.seiama.javaducks.controller.api.v1;
 
+import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.v1.response.ProjectsResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.model.Project;
 import com.seiama.javaducks.util.HTTP;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -61,18 +62,6 @@ public final class ProjectsController {
   @Operation(summary = "Gets a list of all available projects.")
   public ResponseEntity<?> projects() {
     final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> new Project("papermc", endpoint.name(), "b")).toList();
-    return HTTP.cachedOk(ProjectsResponse.from(projects), CACHE);
-  }
-
-  @Schema
-  private record ProjectsResponse(
-    @Schema(name = "ok")
-    boolean ok,
-    @Schema(name = "projects")
-    List<Project> projects
-  ) {
-    static ProjectsResponse from(final List<Project> projectsList) {
-      return new ProjectsResponse(true, projectsList);
-    }
+    return HTTP.cachedOk(ProjectsResponse.success(projects), CACHE);
   }
 }

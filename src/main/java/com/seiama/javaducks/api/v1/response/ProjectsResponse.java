@@ -21,15 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.model;
+package com.seiama.javaducks.api.v1.response;
 
-import org.jspecify.annotations.NullMarked;
+import com.seiama.javaducks.api.model.Project;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
-@NullMarked
-public record Project(
-  String namespace,
-  String name,
-  String displayName
+@Schema
+public record ProjectsResponse(
+  @Schema(name = "ok")
+  boolean ok,
+  @Schema(name = "projects")
+  List<Project> projects
 ) {
-
+  public static ProjectsResponse success(final List<Project> projects) {
+    return new ProjectsResponse(true, projects);
+  }
 }

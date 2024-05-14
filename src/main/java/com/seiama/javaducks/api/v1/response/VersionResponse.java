@@ -21,16 +21,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.model;
+package com.seiama.javaducks.api.v1.response;
 
-import java.net.URI;
+import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.model.Version;
+import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-public record Version(
-  String name,
-  Javadocs javadocs
+@Schema
+public record VersionResponse(
+  @Schema(name = "ok")
+  boolean ok,
+  @Schema(name = "project", pattern = "[a-z]+", example = "paper")
+  Project project,
+  @Schema(name = "version", pattern = AppConfiguration.EndpointConfiguration.Version.PATTERN, example = "1.18")
+  Version version
 ) {
-
-  public record Javadocs(
-    URI url
-  ) { }
+  public static VersionResponse from(final Project project, final AppConfiguration.EndpointConfiguration.Version version, final AppConfiguration configuration) {
+    return new VersionResponse(
+      true,
+      project,
+      new Version(version.name(), new Version.Javadocs(configuration.apiBaseUrl().resolve(project.name() + "/" + version.name() + "/")))
+    );
+  }
 }

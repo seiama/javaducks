@@ -21,11 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.model;
+package com.seiama.javaducks.api.model;
 
-import java.util.List;
+import org.jspecify.annotations.NullMarked;
 
-public record Versions(
-  List<Version> versions
+@NullMarked
+public record Project(
+  String namespace,
+  String name,
+  String displayName
 ) {
 }

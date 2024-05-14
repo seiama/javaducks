@@ -23,9 +23,10 @@
  */
 package com.seiama.javaducks.controller.api.v1;
 
+import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.model.Version;
+import com.seiama.javaducks.api.v1.response.ProjectResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.model.Project;
-import com.seiama.javaducks.model.Version;
 import com.seiama.javaducks.util.HTTP;
 import com.seiama.javaducks.util.exception.ProjectNotFound;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,24 +75,6 @@ public final class ProjectController {
   ) {
     final Project project = new Project("papermc", this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), "b");
     final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(ProjectNotFound::new).versions();
-    return HTTP.cachedOk(ProjectResponse.from(project, versions), CACHE);
-  }
-
-  @Schema
-  private record ProjectResponse(
-    @Schema(name = "ok")
-    boolean ok,
-    @Schema(name = "project", pattern = "[a-z]+", example = "paper")
-    Project project,
-    @Schema(name = "versions")
-    List<Version> versions
-  ) {
-    static ProjectResponse from(final Project project, final List<AppConfiguration.EndpointConfiguration.Version> versions) {
-      return new ProjectResponse(
-        true,
-        project,
-        versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()
-      );
-    }
+    return HTTP.cachedOk(ProjectResponse.from(project, versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()), CACHE);
   }
 }

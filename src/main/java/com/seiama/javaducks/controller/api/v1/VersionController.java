@@ -23,9 +23,9 @@
  */
 package com.seiama.javaducks.controller.api.v1;
 
+import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.v1.response.VersionResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.model.Project;
-import com.seiama.javaducks.model.Version;
 import com.seiama.javaducks.util.HTTP;
 import com.seiama.javaducks.util.exception.ProjectNotFound;
 import com.seiama.javaducks.util.exception.VersionNotFound;
@@ -79,23 +79,5 @@ public final class VersionController {
     final Project project = new Project("papermc", this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), "b");
     final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(VersionNotFound::new).versions().stream().filter(v -> v.name().equals(versionName)).findFirst().orElseThrow(VersionNotFound::new);
     return HTTP.cachedOk(VersionResponse.from(project, version, this.configuration), CACHE);
-  }
-
-  @Schema
-  private record VersionResponse(
-    @Schema(name = "ok")
-    boolean ok,
-    @Schema(name = "project", pattern = "[a-z]+", example = "paper")
-    Project project,
-    @Schema(name = "version", pattern = AppConfiguration.EndpointConfiguration.Version.PATTERN, example = "1.18")
-    Version version
-  ) {
-    static VersionResponse from(final Project project, final AppConfiguration.EndpointConfiguration.Version version, final AppConfiguration configuration) {
-      return new VersionResponse(
-        true,
-        project,
-        new Version(version.name(), new Version.Javadocs(configuration.apiBaseUrl().resolve(project.name() + "/" + version.name() + "/")))
-      );
-    }
   }
 }
