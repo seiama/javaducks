@@ -21,26 +21,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.util.maven;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.jspecify.annotations.Nullable;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
 @NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
+public final class MavenConstants {
+  public static final String SNAPSHOT_VERSION_SUFFIX = "-SNAPSHOT";
+
+  public static final String METADATA_FILE_NAME = "maven-metadata.xml";
+
+  public static final String CLASSIFIER_JAVADOC = "javadoc";
+  public static final String EXTENSION_JAR = "jar";
+
+  private MavenConstants() {
+  }
+
+  public static String versionWithoutSnapshotSuffix(final String version) {
+    if (version.endsWith(SNAPSHOT_VERSION_SUFFIX)) {
+      return version.substring(0, version.length() - SNAPSHOT_VERSION_SUFFIX.length());
+    }
+    return version;
+  }
+
+  public static String metadataUrl(final String groupId, final String artifactId, final @Nullable String version) {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(groupId.replace('.', '/'));
+    sb.append('/');
+    sb.append(artifactId);
+    sb.append('/');
+    if (version != null) {
+      sb.append(version);
+      sb.append('/');
+    }
+    sb.append(METADATA_FILE_NAME);
+    return sb.toString();
   }
 }

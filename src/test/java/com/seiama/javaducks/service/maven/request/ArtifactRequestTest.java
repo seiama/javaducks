@@ -21,26 +21,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.service.maven.request;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import com.seiama.javaducks.util.maven.MavenConstants;
+import com.seiama.javaducks.util.maven.MavenHashType;
+import org.junit.jupiter.api.Test;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
-@NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class ArtifactRequestTest {
+  @Test
+  void testToUrl() {
+    final ArtifactRequest request = new ArtifactRequest(
+      "io.netty",
+      "netty-buffer",
+      "4.1.106.Final",
+      null,
+      null,
+      null,
+      MavenConstants.EXTENSION_JAR,
+      null,
+      null
+    );
+    assertEquals("io/netty/netty-buffer/4.1.106.Final/netty-buffer-4.1.106.Final.jar", request.toUrl());
+
+    final ArtifactRequest requestWithHash = request.withHash(MavenHashType.SHA256);
+    assertEquals("io/netty/netty-buffer/4.1.106.Final/netty-buffer-4.1.106.Final.jar.sha256", requestWithHash.toUrl());
+
+    final ArtifactRequest requestWithSnapshot = request.withVersion("4.1.106.Final-SNAPSHOT").withSnapshot("20240119095726", 5);
+    assertEquals("io/netty/netty-buffer/4.1.106.Final-SNAPSHOT/netty-buffer-4.1.106.Final-20240119095726-5.jar", requestWithSnapshot.toUrl());
   }
 }

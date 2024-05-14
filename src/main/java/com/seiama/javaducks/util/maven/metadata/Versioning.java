@@ -21,26 +21,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.util.maven.metadata;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.List;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.jspecify.annotations.Nullable;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
 @NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
-  }
+public record Versioning(
+  String lastUpdated,
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  String latest,
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable String release,
+  @Nullable Snapshot snapshot,
+  @Nullable List<SnapshotVersion> snapshotVersions,
+  @Nullable List<String> versions
+) {
 }

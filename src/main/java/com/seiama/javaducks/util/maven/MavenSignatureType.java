@@ -21,26 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.util.maven;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
 @NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
+public enum MavenSignatureType {
+  GPG("asc");
+
+  private final String extension;
+
+  MavenSignatureType(final String extension) {
+    this.extension = extension;
+  }
+
+  public String extension() {
+    return this.extension;
   }
 }

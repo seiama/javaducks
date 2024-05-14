@@ -21,26 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.service.maven;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.configuration.properties.MavenConfiguration;
+import com.seiama.javaducks.service.maven.request.ArtifactRequest;
+import com.seiama.javaducks.util.maven.metadata.MavenMetadata;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.jspecify.annotations.Nullable;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
 @NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
-  }
+public interface MavenService {
+  @Nullable MavenMetadata metadataFor(final String repositoryName, final ArtifactRequest request);
+
+  @Nullable MavenMetadata metadataFor(final MavenConfiguration.Repositories.@Nullable Repository repository, final ArtifactRequest request);
+
+  byte @Nullable [] artifactFor(final String repositoryName, final ArtifactRequest request);
+
+  byte @Nullable [] artifactFor(final MavenConfiguration.Repositories.@Nullable Repository repository, final ArtifactRequest request);
 }

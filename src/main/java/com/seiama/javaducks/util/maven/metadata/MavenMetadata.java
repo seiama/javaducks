@@ -21,26 +21,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.util.maven.metadata;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.jspecify.annotations.Nullable;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
+@JacksonXmlRootElement(localName = "metadata")
 @NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
-  }
+public record MavenMetadata(
+  @JacksonXmlProperty(localName = "modelVersion", isAttribute = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable String modelVersion,
+  String groupId,
+  String artifactId,
+  @Nullable String version,
+  Versioning versioning
+) {
+  public static final XmlMapper XML_MAPPER = XmlMapper.builder()
+    .configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true)
+    .build();
 }

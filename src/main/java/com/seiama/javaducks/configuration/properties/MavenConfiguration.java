@@ -21,26 +21,52 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks;
+package com.seiama.javaducks.configuration.properties;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.jspecify.annotations.Nullable;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@EnableConfigurationProperties({
-  AppConfiguration.class,
-  MavenConfiguration.class
-})
-@EnableScheduling
+@ConfigurationProperties("app.maven")
 @NullMarked
-@SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring requires it to be public
-public class JavaDucksApplication {
-  public static void main(final String[] args) {
-    SpringApplication.run(JavaDucksApplication.class, args);
+public record MavenConfiguration(
+  Repositories repositories
+) {
+  public record Repositories(
+    Map<String, Group> groups,
+    Map<String, Proxied> proxied
+  ) {
+    public @Nullable Repository get(final String id) {
+      final Group group = this.groups.get(id);
+      if (group != null) {
+        return group;
+      }
+      final Proxied proxied = this.proxied.get(id);
+      if (proxied != null) {
+        return proxied;
+      }
+      return null;
+    }
+
+    public sealed interface Repository permits Group, Proxied {
+    }
+
+    public record Group(
+      List<String> members
+    ) implements Repository {
+    }
+
+    public record Proxied(
+      String url,
+      Path cache
+    ) implements Repository {
+      public URI url(final String url) {
+        return URI.create(this.url + url);
+      }
+    }
   }
 }
