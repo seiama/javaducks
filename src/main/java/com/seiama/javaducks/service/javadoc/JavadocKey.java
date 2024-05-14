@@ -24,10 +24,14 @@
 package com.seiama.javaducks.service.javadoc;
 
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+import java.nio.file.Path;
 
 @NullMarked
 public record JavadocKey(
   String project,
-  String version
+  String version,
+  @Nullable Path path
 ) {
 }

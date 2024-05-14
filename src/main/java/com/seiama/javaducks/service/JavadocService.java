@@ -89,6 +89,10 @@ public class JavadocService {
       .build(key -> {
         final AppConfiguration.EndpointConfiguration.Version config = this.configuration.endpoint(key.project(), key.version());
         if (config != null) {
+          // WEEEEEEEEEEEEEEE wat do
+          
+          //return new CachedLookup(FileSystems.newFileSystem(this.configuration.endpoint(key.project(), key.version())))
+          if (true) return null;
           return switch (config.type()) {
             case SNAPSHOT, RELEASE -> {
               final Path path = this.configuration.storage().resolve(key.project()).resolve(key.version() + ".jar");
@@ -143,7 +147,7 @@ public class JavadocService {
     // Download using MavenServiceen
     final String[] versionRegex = version.path().split(":");
     System.out.println("VERSION REGEX SPLIT HERE!!!: " + version.path() + " " + versionRegex[0] + " " + versionRegex[1] + " " + versionRegex[2]);
-    final byte[] result = this.mavenService.artifactFor("papermc", new ArtifactRequest(
+    final byte[] result = this.mavenService.artifactFor("papermc-public", new ArtifactRequest(
       versionRegex[0],
       versionRegex[1],
       versionRegex[2],

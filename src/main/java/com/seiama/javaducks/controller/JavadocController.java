@@ -97,13 +97,15 @@ public class JavadocController {
     @PathVariable final String project,
     @PathVariable final String version
   ) {
+    LOGGER.warn("GOT REQUEST FOR {} {}", project, version);
     final String root = "/%s/%s".formatted(project, version);
     String path = ((String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE)).substring(root.length());
     if (path.equals("/")) {
       path = "index.html";
     }
-    final JavadocKey key = new JavadocKey(project, version);
+    final JavadocKey key = new JavadocKey(project, version, null);
     final JavadocService.@Nullable Result result = this.service.contentsFor(key, path);
+    LOGGER.debug("Got result: {}", result);
     if (result != null) {
       final Path file = result.file();
       final URI uri = result.uri();
