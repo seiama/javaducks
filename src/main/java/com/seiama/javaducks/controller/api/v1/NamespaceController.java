@@ -25,20 +25,18 @@ package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.api.model.Namespace;
 import com.seiama.javaducks.api.model.Project;
-import com.seiama.javaducks.api.model.Version;
 import com.seiama.javaducks.api.v1.response.NamespaceResponse;
-import com.seiama.javaducks.api.v1.response.ProjectResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
 import com.seiama.javaducks.util.exception.NamespaceNotFound;
-import com.seiama.javaducks.util.exception.ProjectNotFound;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Pattern;
-import org.jspecify.annotations.Nullable;
+import java.time.Duration;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -47,9 +45,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.Duration;
-import java.util.List;
 
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -78,10 +73,9 @@ public final class NamespaceController {
     @Pattern(regexp = "[a-z]+")
     final String namespaceName // TODO: better name lol
   ) {
+    // TODO: probably get rid of all the streams
     final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(namespaceName)).map(Namespace::new).findFirst().orElseThrow(NamespaceNotFound::new);
-    final List<Project> projects = this.configuration.projects().get(namespaceName).entrySet().stream().map(proj -> {
-      return new Project(namespaceName, proj.getKey(), proj.getValue().displayName());
-    }).toList();
+    final List<Project> projects = this.configuration.projects().get(namespaceName).entrySet().stream().map(proj -> new Project(namespaceName, proj.getKey(), proj.getValue().displayName())).toList();
 
     return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
   }

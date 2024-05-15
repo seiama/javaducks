@@ -24,16 +24,15 @@
 package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.api.model.Namespace;
-import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.v1.response.NamespacesResponse;
-import com.seiama.javaducks.api.v1.response.ProjectsResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import org.jspecify.annotations.Nullable;
+import java.time.Duration;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -41,9 +40,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.Duration;
-import java.util.List;
 
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)

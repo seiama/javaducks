@@ -29,7 +29,7 @@ repositories {
 
 indra {
   javaVersions {
-    target(17)
+    target(21)
   }
 
   github("seiama", "javaducks") {

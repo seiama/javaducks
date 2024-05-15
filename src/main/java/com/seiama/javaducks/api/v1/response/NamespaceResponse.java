@@ -25,9 +25,7 @@ package com.seiama.javaducks.api.v1.response;
 
 import com.seiama.javaducks.api.model.Namespace;
 import com.seiama.javaducks.api.model.Project;
-import com.seiama.javaducks.api.model.Version;
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.util.List;
 
 @Schema

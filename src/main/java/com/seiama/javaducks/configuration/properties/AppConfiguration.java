@@ -79,6 +79,7 @@ public record AppConfiguration(
   public record Project(
     String displayName
   ) {
+    // TODO: ugly bad no
     public com.seiama.javaducks.api.model.Project toApiModel(final String namespace, final String name) {
       return new com.seiama.javaducks.api.model.Project(namespace, name, this.displayName);
     }

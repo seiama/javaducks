@@ -84,7 +84,7 @@ public final class ProjectController {
       // return here?
       throw new ProjectNotFound();
     }
-    // TODO: this filter isn't needed because of the above
+    // TODO: this filter isn't needed because of the above // nvm, it is needed I think
     final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(ProjectNotFound::new).versions();
     return HTTP.cachedOk(ProjectResponse.from(project.toApiModel(namespace, projectName), versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()), CACHE);
   }
