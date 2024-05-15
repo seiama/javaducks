@@ -28,7 +28,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -36,46 +35,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @NullMarked
 public record AppConfiguration(
   URI rootRedirect,
+  @Deprecated(forRemoval = true)
   Path storage,
-  List<EndpointConfiguration> endpoints,
+  @Deprecated(forRemoval = true)
   @DefaultValue({"SHA256", "SHA1"})
   List<MavenHashType> hashTypes
 ) {
-
-  public EndpointConfiguration.@Nullable Version endpoint(final String endpointName, final String versionName) {
-    for (final EndpointConfiguration endpoint : this.endpoints) {
-      if (endpoint.name().equals(endpointName)) {
-        for (final EndpointConfiguration.Version version : endpoint.versions()) {
-          if (version.name().equals(versionName)) {
-            return version;
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  @NullMarked
-  public record EndpointConfiguration(
-    String name,
-    List<Version> versions
-  ) {
-    @NullMarked
-    public record Version(
-      String name,
-      String path,
-      Type type
-    ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
-      }
-
-      @NullMarked
-      public enum Type {
-        SNAPSHOT,
-        RELEASE,
-        REDIRECT,
-      }
-    }
-  }
 }

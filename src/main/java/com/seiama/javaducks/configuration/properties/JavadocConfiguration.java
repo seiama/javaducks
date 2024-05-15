@@ -21,33 +21,57 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.service.maven;
+package com.seiama.javaducks.configuration.properties;
 
-import com.seiama.javaducks.configuration.properties.MavenConfiguration;
 import com.seiama.javaducks.service.maven.request.ArtifactRequest;
-import com.seiama.javaducks.util.maven.metadata.MavenMetadata;
-import java.nio.file.Path;
+import com.seiama.javaducks.util.maven.MavenConstants;
+import java.util.List;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
+@ConfigurationProperties("app.javadoc")
 @NullMarked
-public interface MavenService {
-  @Nullable MavenMetadata metadataFor(final ArtifactRequest request);
-
-  @Nullable MavenMetadata metadataFor(final String repositoryName, final ArtifactRequest request);
-
-  @Nullable MavenMetadata metadataFor(final MavenConfiguration.Repositories.@Nullable Repository repository, final ArtifactRequest request);
-
-  @Nullable Artifact artifactFor(final ArtifactRequest request);
-
-  @Nullable Artifact artifactFor(final String repositoryName, final ArtifactRequest request);
-
-  @Nullable Artifact artifactFor(final MavenConfiguration.Repositories.@Nullable Repository repository, final ArtifactRequest request);
+public record JavadocConfiguration(
+  List<Alias> aliases
+) {
+  public Alias.@Nullable Endpoint findAliasEndpoint(final String aliasName, final String endpointName) {
+    for (final Alias alias : this.aliases) {
+      if (alias.name.equals(aliasName)) {
+        for (final Alias.Endpoint endpoint : alias.endpoints) {
+          for (final String name : endpoint.names) {
+            if (name.equals(endpointName)) {
+              return endpoint;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
 
   @NullMarked
-  record Artifact(
-    Path path,
-    byte[] bytes
+  public record Alias(
+    String namespace,
+    String name,
+    List<Endpoint> endpoints
   ) {
+    @NullMarked
+    public record Endpoint(
+      List<String> names,
+      String repository,
+      Artifact artifact
+    ) {
+      @NullMarked
+      public record Artifact(
+        String groupId,
+        String artifactId,
+        String version
+      ) {
+        public ArtifactRequest asMavenRequest() {
+          return new ArtifactRequest(this.groupId, this.artifactId, this.version, null, null, MavenConstants.CLASSIFIER_JAVADOC, MavenConstants.EXTENSION_JAR, null, null);
+        }
+      }
+    }
   }
 }

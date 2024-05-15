@@ -158,11 +158,8 @@ tasks {
   checkstyleAot {
     isEnabled = false
   }
-  checkstyleAotTest {
-    isEnabled = false
-  }
 
-  test { // cba to fix the test atm
+  checkstyleAotTest {
     isEnabled = false
   }
 

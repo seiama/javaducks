@@ -24,6 +24,7 @@
 package com.seiama.javaducks;
 
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import com.seiama.javaducks.configuration.properties.JavadocConfiguration;
 import com.seiama.javaducks.configuration.properties.MavenConfiguration;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.SpringApplication;
@@ -33,6 +34,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableConfigurationProperties({
   AppConfiguration.class,
+  JavadocConfiguration.class,
   MavenConfiguration.class
 })
 @EnableScheduling

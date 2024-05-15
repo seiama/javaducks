@@ -25,6 +25,7 @@ package com.seiama.javaducks.configuration.properties;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.NullMarked;
@@ -36,10 +37,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record MavenConfiguration(
   Repositories repositories
 ) {
+  @NullMarked
   public record Repositories(
     Map<String, Group> groups,
     Map<String, Proxied> proxied
   ) {
+    public Collection<? extends Repository> all() {
+      return this.proxied.values();
+    }
+
     public @Nullable Repository get(final String id) {
       final Group group = this.groups.get(id);
       if (group != null) {
@@ -52,14 +58,17 @@ public record MavenConfiguration(
       return null;
     }
 
+    @NullMarked
     public sealed interface Repository permits Group, Proxied {
     }
 
+    @NullMarked
     public record Group(
       List<String> members
     ) implements Repository {
     }
 
+    @NullMarked
     public record Proxied(
       String url,
       Path cache

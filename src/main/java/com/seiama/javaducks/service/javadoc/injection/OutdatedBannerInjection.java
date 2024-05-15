@@ -23,11 +23,13 @@
  */
 package com.seiama.javaducks.service.javadoc.injection;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import com.google.common.collect.Iterables;
+import com.seiama.javaducks.configuration.properties.JavadocConfiguration;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.core.io.ClassPathResource;
@@ -37,10 +39,10 @@ import org.springframework.util.StringUtils;
 @Component
 @NullMarked
 public class OutdatedBannerInjection implements Injection {
-  private final AppConfiguration configuration;
+  private final JavadocConfiguration configuration;
   private final String template;
 
-  public OutdatedBannerInjection(final AppConfiguration configuration) {
+  public OutdatedBannerInjection(final JavadocConfiguration configuration) {
     this.configuration = configuration;
     try (final BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource("outdated-banner.html").getInputStream()))) {
       this.template = reader.lines().collect(Collectors.joining("\n"));
@@ -70,10 +72,14 @@ public class OutdatedBannerInjection implements Injection {
   }
 
   private String latestVersion(final JavadocKey key) {
-    return this.configuration.endpoints().stream()
-      .filter(e -> e.name().equals(key.project()))
+    return this.configuration.aliases()
+      .stream()
+      .filter(alias -> alias.name().equals(key.project()))
       .findFirst()
-      .map(e -> e.versions().get(e.versions().size() - 1).name())
+      .map(alias -> {
+        final List<JavadocConfiguration.Alias.Endpoint> endpoints = alias.endpoints();
+        return Iterables.getLast(endpoints.get(endpoints.size() - 1).names());
+      })
       .orElse(key.version());
   }
 }

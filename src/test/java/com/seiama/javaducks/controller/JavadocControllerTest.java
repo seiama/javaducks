@@ -53,7 +53,7 @@ public class JavadocControllerTest {
 
   @BeforeEach
   void setup() {
-    this.javadocService.refreshAll();
+    this.javadocService.preloadAll();
   }
 
   @Test

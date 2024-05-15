@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.service.javadoc;
+package com.seiama.javaducks.util.maven;
 
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
-public record JavadocKey(
-  String project,
-  String version
+public record MavenHashPair(
+  String hash,
+  MavenHashType type
 ) {
 }
