@@ -25,6 +25,7 @@ package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.api.model.Namespace;
 import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.v1.error.request.NamespaceNotFound;
 import com.seiama.javaducks.api.v1.response.NamespaceResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
@@ -73,9 +74,19 @@ public final class NamespaceController {
     final String spaceName // TODO: better name lol
   ) {
     // Implement the new NameespaceNotFound error
-    final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(spaceName)).map(Namespace::new).findFirst().get(); // TODO: get bad
-    final List<Project> projects = this.configuration.projects().get(spaceName).entrySet().stream().map(proj -> new Project(spaceName, proj.getKey(), proj.getValue().displayName())).toList();
+    for (final String namespaceStr : this.configuration.projects().keySet()) {
+      if (namespaceStr.equals(spaceName)) {
+        final Namespace namespace = new Namespace(spaceName);
+        final List<Project> projects = this.configuration.projects().get(spaceName).entrySet().stream().map(proj -> new Project(spaceName, proj.getKey(), proj.getValue().displayName())).toList();
 
-    return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
+        return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
+      }
+    }
+    return HTTP.fail(NamespaceResponse.error(new NamespaceNotFound(spaceName)));
+
+//    final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(spaceName)).map(Namespace::new).findFirst().get(); // TODO: get bad
+//    final List<Project> projects = this.configuration.projects().get(spaceName).entrySet().stream().map(proj -> new Project(spaceName, proj.getKey(), proj.getValue().displayName())).toList();
+//
+//    return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
   }
 }

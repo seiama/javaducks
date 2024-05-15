@@ -25,6 +25,7 @@ package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.api.v1.error.request.NamespaceNotFound;
 import com.seiama.javaducks.api.v1.error.request.ProjectNotFound;
+import com.seiama.javaducks.api.v1.error.request.VersionNotFound;
 import com.seiama.javaducks.api.v1.response.VersionResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
@@ -85,7 +86,17 @@ public final class VersionController {
     if (project == null) {
       return HTTP.fail(VersionResponse.error(new ProjectNotFound(namespace, projectName)));
     }
-    final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().get().versions().stream().filter(v -> v.name().equals(versionName)).findFirst().get(); // TODO: get's bad
-    return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);
+    for (final AppConfiguration.EndpointConfiguration endpoint : this.configuration.endpoints()) {
+      if (endpoint.name().equals(projectName)) {
+        for (final AppConfiguration.EndpointConfiguration.Version version : endpoint.versions()) {
+          if (version.name().equals(versionName)) {
+            return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);
+          }
+        }
+      }
+    }
+    return HTTP.fail(VersionResponse.error(new VersionNotFound(versionName))); // TODO: should include project and shit
+//    final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().get().versions().stream().filter(v -> v.name().equals(versionName)).findFirst().get(); // TODO: get's bad
+//    return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);
   }
 }
