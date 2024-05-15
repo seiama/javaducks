@@ -23,6 +23,7 @@
  */
 package com.seiama.javaducks.configuration.properties;
 
+import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
 import java.nio.file.Path;
@@ -77,7 +78,11 @@ public record AppConfiguration(
   @NullMarked
   public record Project(
     String displayName
-  ) { }
+  ) {
+    public com.seiama.javaducks.api.model.Project toApiModel(final String namespace, final String name) {
+      return new com.seiama.javaducks.api.model.Project(namespace, name, this.displayName);
+    }
+  }
 
   @NullMarked
   public record EndpointConfiguration(

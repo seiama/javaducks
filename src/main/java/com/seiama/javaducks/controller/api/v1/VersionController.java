@@ -23,10 +23,10 @@
  */
 package com.seiama.javaducks.controller.api.v1;
 
-import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.v1.response.VersionResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
+import com.seiama.javaducks.util.exception.NamespaceNotFound;
 import com.seiama.javaducks.util.exception.ProjectNotFound;
 import com.seiama.javaducks.util.exception.VersionNotFound;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +36,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Pattern;
 import java.time.Duration;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -76,9 +77,17 @@ public final class VersionController {
     @Pattern(regexp = AppConfiguration.EndpointConfiguration.Version.PATTERN) //
     final String versionName
   ) {
-    final String namespace = this.configuration.namespaceFromProjectName(projectName);
-    final Project project = new Project(namespace, this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).map(AppConfiguration.EndpointConfiguration::name).findFirst().orElseThrow(ProjectNotFound::new), this.configuration.projectFromNamespace(namespace, projectName).displayName());
+    final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
+    if (namespace == null) {
+      // return here?
+      throw new NamespaceNotFound();
+    }
+    final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, projectName); // TODO: this might need to be com.seiama.javaducks.api.model.Project
+    if (project == null) {
+      // return here?
+      throw new ProjectNotFound();
+    }
     final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(VersionNotFound::new).versions().stream().filter(v -> v.name().equals(versionName)).findFirst().orElseThrow(VersionNotFound::new);
-    return HTTP.cachedOk(VersionResponse.from(project, version, this.configuration), CACHE);
+    return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);
   }
 }

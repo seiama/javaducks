@@ -23,7 +23,10 @@
  */
 package com.seiama.javaducks.controller.api.v1;
 
+import com.seiama.javaducks.api.model.Namespace;
+import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.model.Version;
+import com.seiama.javaducks.api.v1.response.NamespaceResponse;
 import com.seiama.javaducks.api.v1.response.ProjectResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
@@ -35,8 +38,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Pattern;
-import java.time.Duration;
-import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
@@ -47,14 +48,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+import java.util.List;
+
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-public final class ProjectController {
+public final class NamespaceController {
   private static final CacheControl CACHE = HTTP.sMaxAgePublicCache(Duration.ofMinutes(30));
   private final AppConfiguration configuration;
 
   @Autowired
-  private ProjectController(
+  private NamespaceController(
     final AppConfiguration configuration
   ) {
     this.configuration = configuration;
@@ -62,30 +66,23 @@ public final class ProjectController {
 
   @ApiResponse(
     content = @Content(
-      schema = @Schema(implementation = ProjectResponse.class)
+      schema = @Schema(implementation = NamespaceResponse.class)
     ),
     responseCode = "200"
   )
-  @GetMapping("/api/v1/projects/{project:[a-z]+}")
-  @Operation(summary = "Gets information about a project.")
-  public ResponseEntity<?> project(
-    @Parameter(name = "project", description = "The project identifier.", example = "paper")
-    @PathVariable("project")
-    @Pattern(regexp = "[a-z]+") //
-    final String projectName
+  @GetMapping("/api/v1/namespaces/{namespace:[a-z]+}")
+  @Operation(summary = "Gets information about a namespace.")
+  public ResponseEntity<?> namespace(
+    @Parameter(name = "namespace", description = "The project namespace.", example = "papermc")
+    @PathVariable("namespace")
+    @Pattern(regexp = "[a-z]+")
+    final String namespaceName // TODO: better name lol
   ) {
-    final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
-    if (namespace == null) {
-      // return here?
-      throw new NamespaceNotFound();
-    }
-    final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, projectName); // TODO: this might need to be com.seiama.javaducks.api.model.Project
-    if (project == null) {
-      // return here?
-      throw new ProjectNotFound();
-    }
-    // TODO: this filter isn't needed because of the above
-    final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(ProjectNotFound::new).versions();
-    return HTTP.cachedOk(ProjectResponse.from(project.toApiModel(namespace, projectName), versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()), CACHE);
+    final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(namespaceName)).map(Namespace::new).findFirst().orElseThrow(NamespaceNotFound::new);
+    final List<Project> projects = this.configuration.projects().get(namespaceName).entrySet().stream().map(proj -> {
+      return new Project(namespaceName, proj.getKey(), proj.getValue().displayName());
+    }).toList();
+
+    return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
   }
 }

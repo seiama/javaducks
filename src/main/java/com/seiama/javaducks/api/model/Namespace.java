@@ -21,11 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.util.exception;
+package com.seiama.javaducks.api.model;
 
-import java.io.Serial;
+import org.jspecify.annotations.NullMarked;
 
-public class VersionNotFound extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = 8764770241067509407L;
+@NullMarked
+public record Namespace(
+  String namespace
+) {
 }

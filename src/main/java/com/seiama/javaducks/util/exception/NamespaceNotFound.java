@@ -25,7 +25,7 @@ package com.seiama.javaducks.util.exception;
 
 import java.io.Serial;
 
-public class VersionNotFound extends RuntimeException {
+public class NamespaceNotFound extends RuntimeException {
   @Serial
-  private static final long serialVersionUID = 8764770241067509407L;
+  private static final long serialVersionUID = -5449710706902183858L;
 }

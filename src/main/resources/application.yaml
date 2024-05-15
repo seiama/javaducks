@@ -14,6 +14,11 @@ app:
         display-name: "Paper"
       velocity:
         display-name: "Velocity"
+      waterfall:
+        display-name: "Waterfall"
+    misc:
+      protocollib:
+        display-name: "ProtocolLib"
 
 
   endpoints:

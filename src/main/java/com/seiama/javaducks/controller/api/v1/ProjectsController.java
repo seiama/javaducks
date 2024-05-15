@@ -33,6 +33,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.time.Duration;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -61,9 +62,19 @@ public final class ProjectsController {
   @GetMapping("/api/v1/projects")
   @Operation(summary = "Gets a list of all available projects.")
   public ResponseEntity<?> projects() {
+    // TODO: clean this up
     final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> {
-      final String namespace = this.configuration.namespaceFromProjectName(endpoint.name());
-      return new Project(namespace, endpoint.name(), this.configuration.projectFromNamespace(namespace, endpoint.name()).displayName());
+      final @Nullable String namespace = this.configuration.namespaceFromProjectName(endpoint.name());
+      if (namespace == null) {
+        // return here?
+        throw new IllegalStateException("No namespace found for project: " + endpoint.name());
+      }
+      final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, endpoint.name());
+      if (project == null) {
+        // return here?
+        throw new IllegalStateException("No project found for namespace: " + namespace);
+      }
+      return new Project(namespace, endpoint.name(), project.displayName());
     }).toList();
     return HTTP.cachedOk(ProjectsResponse.success(projects), CACHE);
   }

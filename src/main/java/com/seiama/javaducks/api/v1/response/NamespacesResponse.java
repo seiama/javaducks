@@ -21,11 +21,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.util.exception;
+package com.seiama.javaducks.api.v1.response;
 
-import java.io.Serial;
+import com.seiama.javaducks.api.model.Namespace;
+import com.seiama.javaducks.api.model.Project;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-public class VersionNotFound extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = 8764770241067509407L;
+import java.util.List;
+
+@Schema
+public record NamespacesResponse(
+  @Schema(name = "ok")
+  boolean ok,
+  @Schema(name = "namespaces")
+  List<Namespace> namespaces
+) {
+  public static NamespacesResponse success(final List<Namespace> namespaces) {
+    return new NamespacesResponse(true, namespaces);
+  }
 }
