@@ -71,7 +71,7 @@ public final class ProjectController {
   public ResponseEntity<?> project(
     @Parameter(name = "project", description = "The project identifier.", example = "paper")
     @PathVariable("project")
-    @Pattern(regexp = "[a-z]+") //
+    @Pattern(regexp = "[a-z]+")
     final String projectName
   ) {
     final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);

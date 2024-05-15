@@ -70,11 +70,11 @@ public final class VersionController {
   public ResponseEntity<?> version(
     @Parameter(name = "project", description = "The project identifier.", example = "paper")
     @PathVariable("project")
-    @Pattern(regexp = "[a-z]+") //
+    @Pattern(regexp = "[a-z]+")
     final String projectName,
     @Parameter(description = "A version of the project.")
     @PathVariable("version")
-    @Pattern(regexp = AppConfiguration.EndpointConfiguration.Version.PATTERN) //
+    @Pattern(regexp = AppConfiguration.EndpointConfiguration.Version.PATTERN)
     final String versionName
   ) {
     final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
@@ -85,7 +85,7 @@ public final class VersionController {
     final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, projectName); // TODO: this might need to be com.seiama.javaducks.api.model.Project
     if (project == null) {
       // return here?
-      throw new ProjectNotFound();
+      throw new ProjectNotFound("No project found for namespace: " + namespace + " and project: " + projectName);
     }
     final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(VersionNotFound::new).versions().stream().filter(v -> v.name().equals(versionName)).findFirst().orElseThrow(VersionNotFound::new);
     return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);

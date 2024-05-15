@@ -27,6 +27,8 @@ import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.v1.response.ProjectsResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
+import com.seiama.javaducks.util.exception.NamespaceNotFound;
+import com.seiama.javaducks.util.exception.ProjectNotFound;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -67,12 +69,11 @@ public final class ProjectsController {
       final @Nullable String namespace = this.configuration.namespaceFromProjectName(endpoint.name());
       if (namespace == null) {
         // return here?
-        throw new IllegalStateException("No namespace found for project: " + endpoint.name());
+        throw new NamespaceNotFound();
       }
       final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, endpoint.name());
       if (project == null) {
-        // return here?
-        throw new IllegalStateException("No project found for namespace: " + namespace);
+        throw new ProjectNotFound("No project found for namespace: " + namespace + " and project: " + endpoint.name());
       }
       return new Project(namespace, endpoint.name(), project.displayName());
     }).toList();

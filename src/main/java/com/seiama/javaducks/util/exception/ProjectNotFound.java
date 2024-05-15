@@ -24,8 +24,18 @@
 package com.seiama.javaducks.util.exception;
 
 import java.io.Serial;
+import org.jspecify.annotations.NullMarked;
 
+@NullMarked
 public class ProjectNotFound extends RuntimeException {
   @Serial
   private static final long serialVersionUID = 750954361781122398L;
+
+  public ProjectNotFound() {
+    super();
+  }
+
+  public ProjectNotFound(final String message) {
+    super(message);
+  }
 }
