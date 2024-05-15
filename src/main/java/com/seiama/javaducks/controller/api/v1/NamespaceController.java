@@ -70,7 +70,8 @@ public final class NamespaceController {
   public ResponseEntity<?> namespace(
     @Parameter(name = "namespace", description = "The project namespace.", example = "papermc")
     @PathVariable("namespace")
-    @Pattern(regexp = "[a-z]+") final String spaceName // TODO: better name lol
+    @Pattern(regexp = "[a-z]+")
+    final String spaceName // TODO: better name lol
   ) {
     // Implement the new NameespaceNotFound error
     for (final String namespaceStr : this.configuration.projects().keySet()) {
