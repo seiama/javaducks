@@ -95,6 +95,6 @@ public final class VersionController {
         }
       }
     }
-    return HTTP.fail(VersionResponse.error(new VersionNotFound(versionName))); // TODO: should include project and shit
+    return HTTP.fail(VersionResponse.error(new VersionNotFound(namespace, projectName, versionName)));
   }
 }

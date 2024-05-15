@@ -28,11 +28,13 @@ import com.seiama.javaducks.api.v1.error.ErrorRequest;
 import com.seiama.javaducks.api.v1.error.ToError;
 
 public record VersionNotFound(
+  String namespace,
+  String project,
   String version
 ) implements ErrorRequest, ToError {
 
   @Override
   public Error toError() {
-    return new Error("No version with name " + this.version + " found", this);
+    return new Error("No version %s found in project %s in namespace %s".formatted(this.version, this.project, this.namespace), this);
   }
 }
