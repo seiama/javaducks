@@ -1,20 +1,45 @@
 app:
   root-redirect: 'https://papermc.io/javadocs'
   storage: './build/tmp/work'
-  endpoints:
-    - name: 'paper'
-      versions:
-        - name: '1.12'
-          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.12.2-R0.1-SNAPSHOT/'
-          type: 'SNAPSHOT'
-        - name: '1.20'
-          path: '/paper/1.20.4/'
-          type: 'REDIRECT'
-        - name: '1.20.4'
-          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.4-R0.1-SNAPSHOT/'
-          type: 'SNAPSHOT'
-    - name: 'paperlib'
-      versions:
-        - name: '1.0.8'
-          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paperlib/1.0.8/paperlib-1.0.8-javadoc.jar'
-          type: 'RELEASE'
+
+  maven:
+    hashes:
+      - SHA256
+      - SHA1
+      - MD5
+    repositories:
+      proxied:
+        papermc-public:
+          url: https://repo.papermc.io/repository/maven-public/
+          cache: ./storage/cache/papermc-public/
+
+  javadoc:
+    aliases:
+      - namespace: 'papermc'
+        name: 'paper'
+        endpoints:
+          - names:
+              - '1.12'
+              - '1.12.2'
+            repository: 'papermc-public'
+            artifact:
+              group-id: 'com.destroystokyo.paper'
+              artifact-id: 'paper-api'
+              version: '1.12.2-R0.1-SNAPSHOT'
+          - names:
+              - '1.20.4'
+            repository: 'papermc-public'
+            artifact:
+              group-id: 'io.papermc.paper'
+              artifact-id: 'paper-api'
+              version: '1.20.4-R0.1-SNAPSHOT'
+      - namespace: 'papermc'
+        name: 'paperlib'
+        endpoints:
+          - names:
+              - '1.0.8'
+            repository: 'papermc-public'
+            artifact:
+              group-id: 'io.papermc'
+              artifact-id: 'paperlib'
+              version: '1.0.8'

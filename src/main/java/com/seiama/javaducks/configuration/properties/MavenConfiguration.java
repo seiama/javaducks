@@ -23,6 +23,7 @@
  */
 package com.seiama.javaducks.configuration.properties;
 
+import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -31,11 +32,18 @@ import java.util.Map;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties("app.maven")
 @NullMarked
 public record MavenConfiguration(
-  Repositories repositories
+  Repositories repositories,
+  @DefaultValue({
+    "SHA256",
+    "SHA1",
+    "MD5"
+  })
+  List<MavenHashType> hashes
 ) {
   @NullMarked
   public record Repositories(

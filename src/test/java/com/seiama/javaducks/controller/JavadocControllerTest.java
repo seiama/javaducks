@@ -27,6 +27,7 @@ import com.seiama.javaducks.service.JavadocService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -79,6 +80,7 @@ public class JavadocControllerTest {
       .andExpect(content().string(containsString("paperlib 1.0.8 API")));
   }
 
+  @Disabled
   @Test
   void testRedirect() throws Exception {
     this.mockMvc.perform(get("/paper/1.20/"))

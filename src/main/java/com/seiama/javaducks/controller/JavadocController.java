@@ -26,12 +26,12 @@ package com.seiama.javaducks.controller;
 import com.seiama.javaducks.service.JavadocService;
 import com.seiama.javaducks.service.javadoc.JavadocInjector;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
+import com.seiama.javaducks.util.http.MediaTypes;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Map;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -63,12 +63,6 @@ public class JavadocController {
   private static final CacheControl CACHE_CONTROL = CacheControl.maxAge(Duration.ofMinutes(10));
   private static final CacheControl STATICS_CACHE_CONTROL = CacheControl.maxAge(Duration.ofDays(7));
   private static final ContentDisposition CONTENT_DISPOSITION = ContentDisposition.inline().build();
-  private static final Map<String, MediaType> MEDIATYPES = Map.of(
-    ".css", MediaType.parseMediaType("text/css"),
-    ".js", MediaType.parseMediaType("application/javascript"),
-    ".zip", MediaType.parseMediaType("application/zip"),
-    ".html", MediaType.parseMediaType("text/html")
-  );
   private final JavadocService service;
   private final JavadocInjector injector;
 
@@ -119,11 +113,9 @@ public class JavadocController {
               headers.setContentDisposition(CONTENT_DISPOSITION);
               headers.set("X-JavaDucks", "Quack");
               final String name = file.getFileName().toString();
-              for (final Map.Entry<String, MediaType> entry : MEDIATYPES.entrySet()) {
-                if (name.endsWith(entry.getKey())) {
-                  headers.setContentType(entry.getValue());
-                  break;
-                }
+              final @Nullable MediaType type = MediaTypes.fromFileName(name);
+              if (type != null) {
+                headers.setContentType(type);
               }
             })
             .body(this.injector.runInjections(file, key));
@@ -142,7 +134,7 @@ public class JavadocController {
     if (Files.isReadable(favicon)) {
       return ok()
         .cacheControl(STATICS_CACHE_CONTROL)
-        .headers(headers -> headers.setContentType(MediaType.parseMediaType("image/x-icon")))
+        .headers(headers -> headers.setContentType(MediaTypes.IMAGE_X_ICON))
         .body(new FileSystemResource(favicon));
     } else {
       LOGGER.warn("Did not find favicon for project {}", project);

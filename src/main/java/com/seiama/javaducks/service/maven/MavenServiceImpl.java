@@ -23,10 +23,8 @@
  */
 package com.seiama.javaducks.service.maven;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.configuration.properties.MavenConfiguration;
 import com.seiama.javaducks.service.maven.request.ArtifactRequest;
-import com.seiama.javaducks.util.exception.HashNotFoundException;
 import com.seiama.javaducks.util.maven.MavenConstants;
 import com.seiama.javaducks.util.maven.MavenHashPair;
 import com.seiama.javaducks.util.maven.MavenHashType;
@@ -59,18 +57,16 @@ class MavenServiceImpl implements MavenService {
   private static final Duration CACHED_METADATA_EXPIRATION = Duration.ofMinutes(5);
   private static final String USER_AGENT = "JavaDucks";
   private final RestClient restClient = RestClient.create();
-  private final AppConfiguration appConfiguration;
-  private final MavenConfiguration mavenConfiguration;
+  private final MavenConfiguration configuration;
 
   @Autowired
-  MavenServiceImpl(final AppConfiguration configuration, final MavenConfiguration mavenConfiguration) {
-    this.appConfiguration = configuration;
-    this.mavenConfiguration = mavenConfiguration;
+  MavenServiceImpl(final MavenConfiguration configuration) {
+    this.configuration = configuration;
   }
 
   @Override
   public @Nullable MavenMetadata metadataFor(final ArtifactRequest request) {
-    for (final MavenConfiguration.Repositories.Repository repository : this.mavenConfiguration.repositories().all()) {
+    for (final MavenConfiguration.Repositories.Repository repository : this.configuration.repositories().all()) {
       final MavenMetadata metadata = this.metadataFor(repository, request);
       if (metadata != null) {
         return metadata;
@@ -81,7 +77,7 @@ class MavenServiceImpl implements MavenService {
 
   @Override
   public @Nullable MavenMetadata metadataFor(final String repositoryName, final ArtifactRequest request) {
-    return this.metadataFor(this.mavenConfiguration.repositories().get(repositoryName), request);
+    return this.metadataFor(this.configuration.repositories().get(repositoryName), request);
   }
 
   @Override
@@ -101,7 +97,7 @@ class MavenServiceImpl implements MavenService {
 
   @Override
   public @Nullable Artifact artifactFor(final ArtifactRequest request) {
-    for (final MavenConfiguration.Repositories.Repository repository : this.mavenConfiguration.repositories().all()) {
+    for (final MavenConfiguration.Repositories.Repository repository : this.configuration.repositories().all()) {
       final @Nullable Artifact bytes = this.artifactFor(repository, request);
       if (bytes != null) {
         return bytes;
@@ -112,7 +108,7 @@ class MavenServiceImpl implements MavenService {
 
   @Override
   public @Nullable Artifact artifactFor(final String repositoryName, final ArtifactRequest request) {
-    return this.artifactFor(this.mavenConfiguration.repositories().get(repositoryName), request);
+    return this.artifactFor(this.configuration.repositories().get(repositoryName), request);
   }
 
   @Override
@@ -127,7 +123,6 @@ class MavenServiceImpl implements MavenService {
         }
       }
     }
-    System.out.println("release url: " + request.toUrl());
     return this.get(repository, request.toUrl(), null);
   }
 
@@ -139,42 +134,44 @@ class MavenServiceImpl implements MavenService {
     if (repository != null) {
       if (repository instanceof final MavenConfiguration.Repositories.Group group) {
         for (final String member : group.members()) {
-          final @Nullable Artifact result = this.get(this.mavenConfiguration.repositories().get(member), url, lifetime);
+          final @Nullable Artifact result = this.get(this.configuration.repositories().get(member), url, lifetime);
           if (result != null) {
             return result;
           }
         }
       } else if (repository instanceof final MavenConfiguration.Repositories.Proxied proxied) {
+        final URI remoteUrl = proxied.url(url);
+
         final Path path = proxied.cache().resolve(url);
+
+        // First we check if the file exceeds the lifetime for cached files
         this.tryAndRemoveExpiredFile(path, lifetime);
 
-        // TODO: this probably needs to move down to properly check the metadata for a fresh artifact
-        if (Files.isRegularFile(path)) {
-          try {
-            LOGGER.debug("Using non-expired cached file {} for request {}", path, url);
-            return new Artifact(path, Files.readAllBytes(path));
-          } catch (final IOException e) {
-            LOGGER.error("Could not open stream for file {}", path);
-            return null;
-          }
+        @Nullable MavenHashPair hash = null;
+        if (shouldCheckHashes(url)) {
+          hash = this.downloadHash(remoteUrl);
         }
 
-        // hash checking
-        // get hash
-        // idk don't check if it's maven-metadata.xml i guess
-        @Nullable MavenHashPair hash = null;
-        if (!url.endsWith(MavenConstants.METADATA_FILE_NAME)) {
-          hash = this.downloadHash(URI.create(((MavenConfiguration.Repositories.Proxied) repository).url() + url)); // this is the maven-metadata?
-
-          if (Files.isReadable(path)) {
+        if (Files.isRegularFile(path)) {
+          boolean canUseCachedAsset = true;
+          if (hash != null) {
             try {
-              final String hashOnDisk = hash.type().algorithm().hash(path).toString();
-              if (hashOnDisk.equals(hash.hash())) {
-                LOGGER.debug("Using non-expired cached file {} (hash: {}) for request {}", path, hash, url);
-                return new Artifact(path, Files.readAllBytes(path)); // this probably is bad
+              final String hashOfCachedAsset = hash.type().algorithm().hash(path).toString();
+              if (!hashOfCachedAsset.equals(hash.hash())) {
+                canUseCachedAsset = false;
               }
             } catch (final IOException e) {
-              throw new RuntimeException(e);
+              LOGGER.error("Could not compute hash {} of cached asset {}", hash.type(), path);
+            }
+          }
+          if (canUseCachedAsset) {
+            try {
+              final byte[] bytes = Files.readAllBytes(path);
+              LOGGER.debug("Using non-expired cached file {} (hash: {}) for request {}", path, hash, url);
+              return new Artifact(path, bytes);
+            } catch (final IOException e) {
+              LOGGER.error("Could not read cached asset {}", path);
+              return null;
             }
           }
         }
@@ -187,17 +184,19 @@ class MavenServiceImpl implements MavenService {
             .retrieve()
             .toEntity(byte[].class);
         } catch (final HttpClientErrorException e) {
-          LOGGER.error("Encountered http exception for url %s".formatted(proxied.url(url)), e);
-          return null;
-        }
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+          LOGGER.error("Could not fetch remote asset %s due to http error".formatted(remoteUrl), e);
           return null;
         }
 
-        if (!url.endsWith(MavenConstants.METADATA_FILE_NAME)) {
-          final String downloadedHash = hash.type().algorithm().hash(response.getBody()).toString();
-          if (!downloadedHash.equals(hash.hash())) {
-            LOGGER.warn("Could not update javadoc for . {} Hash mismatch. Expected: {}, got: {}", /*config.name(), version.name(),*/ hash.type(), hash.hash(), downloadedHash);
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+          LOGGER.error("Could not fetch remote asset %s due to non-successful response".formatted(remoteUrl));
+          return null;
+        }
+
+        if (hash != null && shouldCheckHashes(url)) {
+          final String hashOfRemoteAsset = hash.type().algorithm().hash(response.getBody()).toString();
+          if (!hashOfRemoteAsset.equals(hash.hash())) {
+            LOGGER.warn("Could not verify remote asset {} due to {} hash mismatch - expected: {}, actual: {}", remoteUrl, hash.type(), hash.hash(), hashOfRemoteAsset);
             return null;
           }
         }
@@ -206,18 +205,23 @@ class MavenServiceImpl implements MavenService {
         try {
           Files.createDirectories(path.getParent());
         } catch (final IOException e) {
-          LOGGER.error("Could not create parent directories for file {}", path);
+          LOGGER.error("Could not create parent directories for asset {}", path);
           return null;
         }
         try (final OutputStream os = Files.newOutputStream(path)) {
           os.write(body.clone());
         } catch (final IOException e) {
-          throw new RuntimeException(e);
+          LOGGER.error("Could not write remote asset {} to local cache", path);
+          return null;
         }
         return new Artifact(path, body);
       }
     }
     return null;
+  }
+
+  private static boolean shouldCheckHashes(final String url) {
+    return !url.endsWith(MavenConstants.METADATA_FILE_NAME);
   }
 
   private void tryAndRemoveExpiredFile(final Path path, final @Nullable Duration lifetime) {
@@ -241,8 +245,8 @@ class MavenServiceImpl implements MavenService {
     }
   }
 
-  public MavenHashPair downloadHash(final URI jarUri) {
-    for (final MavenHashType type : this.appConfiguration.hashTypes()) {
+  public @Nullable MavenHashPair downloadHash(final URI jarUri) {
+    for (final MavenHashType type : this.configuration.hashes()) {
       final URI hashUri = UriComponentsBuilder.fromUri(jarUri).replacePath(jarUri.getPath() + "." + type.extension()).build().toUri();
       try {
         final ResponseEntity<String> response = this.restClient.get()
@@ -251,7 +255,6 @@ class MavenServiceImpl implements MavenService {
           .retrieve()
           .toEntity(String.class);
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-          LOGGER.debug("Downloaded hash for . Url: {} using hash type {}", /*config.name(), */hashUri, type);
           return new MavenHashPair(response.getBody(), type);
         }
       } catch (final Exception e) {
@@ -262,6 +265,6 @@ class MavenServiceImpl implements MavenService {
         }
       }
     }
-    throw new HashNotFoundException("UNKNOWN OOP", null);
+    return null;
   }
 }

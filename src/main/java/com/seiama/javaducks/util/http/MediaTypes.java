@@ -21,18 +21,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.configuration.properties;
+package com.seiama.javaducks.util.http;
 
-import java.net.URI;
-import java.nio.file.Path;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.jspecify.annotations.Nullable;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 
-@ConfigurationProperties(prefix = "app")
 @NullMarked
-public record AppConfiguration(
-  URI rootRedirect,
-  @Deprecated(forRemoval = true)
-  Path storage
-) {
+public final class MediaTypes {
+  public static final String APPLICATION_JAVA_ARCHIVE_VALUE = "application/java-archive";
+  public static final MediaType APPLICATION_JAVA_ARCHIVE = MediaType.parseMediaType(APPLICATION_JAVA_ARCHIVE_VALUE);
+
+  public static final String APPLICATION_ZIP_VALUE = "application/zip";
+  public static final MediaType APPLICATION_ZIP = MediaType.parseMediaType(APPLICATION_ZIP_VALUE);
+
+  public static final MediaType IMAGE_X_ICON = MediaType.parseMediaType("image/x-icon"); // .ico
+
+  private MediaTypes() {
+  }
+
+  public static @Nullable MediaType fromFileName(final String name) {
+    final int index = name.lastIndexOf('.');
+    if (index != -1) {
+      return fromFileExtension(name.substring(index + 1));
+    }
+    return null;
+  }
+
+  @SuppressWarnings("SwitchStatementWithTooFewBranches")
+  public static @Nullable MediaType fromFileExtension(final String extension) {
+    return switch (extension) {
+      case "mcpack" -> APPLICATION_ZIP;
+      default -> MediaTypeFactory.getMediaType("." + extension).orElse(null);
+    };
+  }
 }
