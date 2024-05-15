@@ -23,17 +23,26 @@
  */
 package com.seiama.javaducks.service.javadoc.injection;
 
+import com.seiama.javaducks.service.JavadocService;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
 import java.nio.file.Path;
 import org.jspecify.annotations.NullMarked;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 @NullMarked
 public class FaviconInjection implements Injection {
+  private final JavadocService service;
+
+  @Autowired
+  public FaviconInjection(final JavadocService service) {
+    this.service = service;
+  }
+
   @Override
   public boolean canInject(final Path file, final JavadocKey key) {
-    return file.toString().endsWith(HTML);
+    return file.toString().endsWith(HTML) && this.service.faviconFor(key.project()) != null;
   }
 
   @Override
