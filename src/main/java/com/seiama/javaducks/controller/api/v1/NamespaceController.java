@@ -70,8 +70,7 @@ public final class NamespaceController {
   public ResponseEntity<?> namespace(
     @Parameter(name = "namespace", description = "The project namespace.", example = "papermc")
     @PathVariable("namespace")
-    @Pattern(regexp = "[a-z]+")
-    final String spaceName // TODO: better name lol
+    @Pattern(regexp = "[a-z]+") final String spaceName // TODO: better name lol
   ) {
     // Implement the new NameespaceNotFound error
     for (final String namespaceStr : this.configuration.projects().keySet()) {
@@ -83,10 +82,5 @@ public final class NamespaceController {
       }
     }
     return HTTP.fail(NamespaceResponse.error(new NamespaceNotFound(spaceName)));
-
-//    final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(spaceName)).map(Namespace::new).findFirst().get(); // TODO: get bad
-//    final List<Project> projects = this.configuration.projects().get(spaceName).entrySet().stream().map(proj -> new Project(spaceName, proj.getKey(), proj.getValue().displayName())).toList();
-//
-//    return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
   }
 }

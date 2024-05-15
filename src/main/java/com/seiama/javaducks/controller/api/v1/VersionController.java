@@ -80,8 +80,8 @@ public final class VersionController {
     final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
     if (namespace == null) {
       return HTTP.fail(VersionResponse.error(new NamespaceNotFound(projectName)));
-
     }
+
     final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, projectName); // TODO: this might need to be com.seiama.javaducks.api.model.Project
     if (project == null) {
       return HTTP.fail(VersionResponse.error(new ProjectNotFound(namespace, projectName)));
@@ -96,7 +96,5 @@ public final class VersionController {
       }
     }
     return HTTP.fail(VersionResponse.error(new VersionNotFound(versionName))); // TODO: should include project and shit
-//    final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().get().versions().stream().filter(v -> v.name().equals(versionName)).findFirst().get(); // TODO: get's bad
-//    return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);
   }
 }

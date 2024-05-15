@@ -71,8 +71,7 @@ public final class ProjectController {
   public ResponseEntity<?> project(
     @Parameter(name = "project", description = "The project identifier.", example = "paper")
     @PathVariable("project")
-    @Pattern(regexp = "[a-z]+")
-    final String projectName
+    @Pattern(regexp = "[a-z]+") final String projectName
   ) {
     final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
     if (namespace == null) {
@@ -83,7 +82,13 @@ public final class ProjectController {
       return HTTP.fail(ProjectResponse.error(new ProjectNotFound(namespace, projectName)));
     }
     // TODO: this filter isn't needed because of the above // nvm, it is needed I think
-    final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().get().versions(); // TODO: get bad
-    return HTTP.cachedOk(ProjectResponse.from(project.toApiModel(namespace, projectName), versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()), CACHE);
+
+    for (final AppConfiguration.EndpointConfiguration endpoint : this.configuration.endpoints()) {
+      if (endpoint.name().equals(projectName)) {
+        final List<Version> versions = endpoint.versions().stream().filter(i -> i.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList();
+        return HTTP.cachedOk(ProjectResponse.from(project.toApiModel(namespace, projectName), versions), CACHE);
+      }
+    }
+    return HTTP.fail(ProjectResponse.error(new ProjectNotFound(namespace, projectName)));
   }
 }

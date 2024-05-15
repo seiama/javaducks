@@ -50,8 +50,10 @@ public record AppConfiguration(
 
   public @Nullable String namespaceFromProjectName(final String projectName) {
     for (final Map.Entry<String, Map<String, Project>> entry : this.projects.entrySet()) {
-      if (entry.getValue().containsKey(projectName)) {
-        return entry.getKey();
+      for (final String name : entry.getValue().keySet()) {
+        if (name.equals(projectName)) {
+          return entry.getKey();
+        }
       }
     }
     return null;
