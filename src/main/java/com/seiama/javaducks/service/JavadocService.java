@@ -26,7 +26,6 @@ package com.seiama.javaducks.service;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.configuration.properties.JavadocConfiguration;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
 import com.seiama.javaducks.service.maven.MavenService;
@@ -52,14 +51,12 @@ public class JavadocService {
   private static final long REFRESH_INITIAL_DELAY = 0; // in minutes
   private static final long REFRESH_RATE = 15; // in minutes
   private final JavadocConfiguration configuration;
-  private final AppConfiguration appConfiguration;
   private final LoadingCache<JavadocKey, CachedLookup> contents;
   private final MavenService mavenService;
 
   @Autowired
-  public JavadocService(final JavadocConfiguration configuration, final AppConfiguration appConfiguration, final MavenService mavenService) {
+  public JavadocService(final JavadocConfiguration configuration, final MavenService mavenService) {
     this.configuration = configuration;
-    this.appConfiguration = appConfiguration;
     this.mavenService = mavenService;
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
@@ -85,7 +82,7 @@ public class JavadocService {
   }
 
   public @Nullable Result contentsFor(final JavadocKey key, final String path) {
-    final CachedLookup lookup = this.contents.get(key);
+    final @Nullable CachedLookup lookup = this.contents.get(key);
     if (lookup != null) {
       if (lookup.fs() != null) {
         return new Result(lookup.fs().getPath(path), null);
@@ -96,8 +93,12 @@ public class JavadocService {
     return null;
   }
 
-  public Path faviconFor(final String project) {
-    return this.appConfiguration.storage().resolve(project).resolve("favicon.ico");
+  public @Nullable Path faviconFor(final String project) {
+    final JavadocConfiguration.Alias alias = this.configuration.findAlias(project);
+    if (alias != null) {
+      return alias.favicon();
+    }
+    return null;
   }
 
   @Scheduled(

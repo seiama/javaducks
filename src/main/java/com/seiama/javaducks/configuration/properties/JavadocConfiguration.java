@@ -25,6 +25,7 @@ package com.seiama.javaducks.configuration.properties;
 
 import com.seiama.javaducks.service.maven.request.ArtifactRequest;
 import com.seiama.javaducks.util.maven.MavenConstants;
+import java.nio.file.Path;
 import java.util.List;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -35,14 +36,22 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record JavadocConfiguration(
   List<Alias> aliases
 ) {
-  public Alias.@Nullable Endpoint findAliasEndpoint(final String aliasName, final String endpointName) {
+  public @Nullable Alias findAlias(final String aliasName) {
     for (final Alias alias : this.aliases) {
       if (alias.name.equals(aliasName)) {
-        for (final Alias.Endpoint endpoint : alias.endpoints) {
-          for (final String name : endpoint.names) {
-            if (name.equals(endpointName)) {
-              return endpoint;
-            }
+        return alias;
+      }
+    }
+    return null;
+  }
+
+  public Alias.@Nullable Endpoint findAliasEndpoint(final String aliasName, final String endpointName) {
+    final @Nullable Alias alias = this.findAlias(aliasName);
+    if (alias != null) {
+      for (final Alias.Endpoint endpoint : alias.endpoints) {
+        for (final String name : endpoint.names) {
+          if (name.equals(endpointName)) {
+            return endpoint;
           }
         }
       }
@@ -54,6 +63,7 @@ public record JavadocConfiguration(
   public record Alias(
     String namespace,
     String name,
+    @Nullable Path favicon,
     List<Endpoint> endpoints
   ) {
     @NullMarked

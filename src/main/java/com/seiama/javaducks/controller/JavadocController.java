@@ -131,7 +131,7 @@ public class JavadocController {
   @ResponseBody
   public ResponseEntity<?> serveFavicon(@PathVariable final String project) {
     final Path favicon = this.service.faviconFor(project);
-    if (Files.isReadable(favicon)) {
+    if (favicon != null && Files.isReadable(favicon)) {
       return ok()
         .cacheControl(STATICS_CACHE_CONTROL)
         .headers(headers -> headers.setContentType(MediaTypes.IMAGE_X_ICON))

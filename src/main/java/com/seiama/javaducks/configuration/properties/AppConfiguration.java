@@ -24,15 +24,12 @@
 package com.seiama.javaducks.configuration.properties;
 
 import java.net.URI;
-import java.nio.file.Path;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 @NullMarked
 public record AppConfiguration(
-  URI rootRedirect,
-  @Deprecated(forRemoval = true)
-  Path storage
+  URI rootRedirect
 ) {
 }
