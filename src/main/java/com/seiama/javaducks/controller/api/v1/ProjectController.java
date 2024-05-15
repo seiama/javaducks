@@ -24,11 +24,11 @@
 package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.api.model.Version;
+import com.seiama.javaducks.api.v1.error.request.NamespaceNotFound;
+import com.seiama.javaducks.api.v1.error.request.ProjectNotFound;
 import com.seiama.javaducks.api.v1.response.ProjectResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
-import com.seiama.javaducks.util.exception.NamespaceNotFound;
-import com.seiama.javaducks.util.exception.ProjectNotFound;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -76,16 +76,14 @@ public final class ProjectController {
   ) {
     final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
     if (namespace == null) {
-      // return here?
-      throw new NamespaceNotFound();
+      return HTTP.fail(ProjectResponse.error(new NamespaceNotFound(projectName)));
     }
     final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, projectName); // TODO: this might need to be com.seiama.javaducks.api.model.Project
     if (project == null) {
-      // return here?
-      throw new ProjectNotFound();
+      return HTTP.fail(ProjectResponse.error(new ProjectNotFound(namespace, projectName)));
     }
     // TODO: this filter isn't needed because of the above // nvm, it is needed I think
-    final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(ProjectNotFound::new).versions();
+    final List<AppConfiguration.EndpointConfiguration.Version> versions = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().get().versions(); // TODO: get bad
     return HTTP.cachedOk(ProjectResponse.from(project.toApiModel(namespace, projectName), versions.stream().filter(v -> v.type() != AppConfiguration.EndpointConfiguration.Version.Type.REDIRECT).map(i -> new Version(i.name(), null)).toList()), CACHE);
   }
 }

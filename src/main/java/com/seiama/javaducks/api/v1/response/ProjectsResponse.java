@@ -23,18 +23,29 @@
  */
 package com.seiama.javaducks.api.v1.response;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ToError;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 @Schema
 public record ProjectsResponse(
   @Schema(name = "ok")
   boolean ok,
   @Schema(name = "projects")
-  List<Project> projects
+  @Nullable List<Project> projects,
+  @JsonUnwrapped
+  @Nullable
+  Error error
 ) {
   public static ProjectsResponse success(final List<Project> projects) {
-    return new ProjectsResponse(true, projects);
+    return new ProjectsResponse(true, projects, null);
+  }
+
+  public static ProjectsResponse failure(final ToError error) {
+    return new ProjectsResponse(false, null, error.toError());
   }
 }

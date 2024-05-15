@@ -23,25 +23,37 @@
  */
 package com.seiama.javaducks.api.v1.response;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.model.Version;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ToError;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.jspecify.annotations.Nullable;
 
 @Schema
 public record VersionResponse(
   @Schema(name = "ok")
   boolean ok,
   @Schema(name = "project", pattern = "[a-z]+", example = "paper")
-  Project project,
+  @Nullable Project project,
   @Schema(name = "version", pattern = AppConfiguration.EndpointConfiguration.Version.PATTERN, example = "1.18")
-  Version version
+  @Nullable Version version,
+  @JsonUnwrapped
+  @Nullable
+  Error error
 ) {
   public static VersionResponse from(final Project project, final AppConfiguration.EndpointConfiguration.Version version, final AppConfiguration configuration) {
     return new VersionResponse(
       true,
       project,
-      new Version(version.name(), new Version.Javadocs(configuration.apiBaseUrl().resolve(project.name() + "/" + version.name() + "/")))
+      new Version(version.name(), new Version.Javadocs(configuration.apiBaseUrl().resolve(project.name() + "/" + version.name() + "/"))),
+      null
     );
+  }
+
+  public static VersionResponse error(final ToError error) {
+    return new VersionResponse(false, null, null, error.toError());
   }
 }

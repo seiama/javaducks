@@ -28,7 +28,6 @@ import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.v1.response.NamespaceResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
-import com.seiama.javaducks.util.exception.NamespaceNotFound;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -71,11 +70,11 @@ public final class NamespaceController {
     @Parameter(name = "namespace", description = "The project namespace.", example = "papermc")
     @PathVariable("namespace")
     @Pattern(regexp = "[a-z]+")
-    final String namespaceName // TODO: better name lol
+    final String spaceName // TODO: better name lol
   ) {
-    // TODO: probably get rid of all the streams
-    final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(namespaceName)).map(Namespace::new).findFirst().orElseThrow(NamespaceNotFound::new);
-    final List<Project> projects = this.configuration.projects().get(namespaceName).entrySet().stream().map(proj -> new Project(namespaceName, proj.getKey(), proj.getValue().displayName())).toList();
+    // Implement the new NameespaceNotFound error
+    final Namespace namespace = this.configuration.projects().keySet().stream().filter(i -> i.equals(spaceName)).map(Namespace::new).findFirst().get(); // TODO: get bad
+    final List<Project> projects = this.configuration.projects().get(spaceName).entrySet().stream().map(proj -> new Project(spaceName, proj.getKey(), proj.getValue().displayName())).toList();
 
     return HTTP.cachedOk(NamespaceResponse.from(namespace, projects), CACHE);
   }

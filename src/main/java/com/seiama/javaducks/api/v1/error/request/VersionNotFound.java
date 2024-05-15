@@ -21,11 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.util.exception;
+package com.seiama.javaducks.api.v1.error.request;
 
-import java.io.Serial;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ErrorRequest;
+import com.seiama.javaducks.api.v1.error.ToError;
 
-public class NamespaceNotFound extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = -5449710706902183858L;
+public record VersionNotFound(
+  String version
+) implements ErrorRequest, ToError {
+
+  @Override
+  public Error toError() {
+    return new Error("No version with name " + this.version + " found", this);
+  }
 }

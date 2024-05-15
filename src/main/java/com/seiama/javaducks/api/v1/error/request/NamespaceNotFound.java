@@ -21,21 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.util.exception;
+package com.seiama.javaducks.api.v1.error.request;
 
-import java.io.Serial;
-import org.jspecify.annotations.NullMarked;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ErrorRequest;
+import com.seiama.javaducks.api.v1.error.ToError;
 
-@NullMarked
-public class ProjectNotFound extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = 750954361781122398L;
+public record NamespaceNotFound(
+  String namespace
+) implements ErrorRequest, ToError {
 
-  public ProjectNotFound() {
-    super();
-  }
-
-  public ProjectNotFound(final String message) {
-    super(message);
+  @Override
+  public Error toError() {
+    return new Error("No namespace found with namespace " + this.namespace, this);
   }
 }

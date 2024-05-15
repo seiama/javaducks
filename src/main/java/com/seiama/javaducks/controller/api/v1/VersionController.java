@@ -23,12 +23,11 @@
  */
 package com.seiama.javaducks.controller.api.v1;
 
+import com.seiama.javaducks.api.v1.error.request.NamespaceNotFound;
+import com.seiama.javaducks.api.v1.error.request.ProjectNotFound;
 import com.seiama.javaducks.api.v1.response.VersionResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
-import com.seiama.javaducks.util.exception.NamespaceNotFound;
-import com.seiama.javaducks.util.exception.ProjectNotFound;
-import com.seiama.javaducks.util.exception.VersionNotFound;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -79,15 +78,14 @@ public final class VersionController {
   ) {
     final @Nullable String namespace = this.configuration.namespaceFromProjectName(projectName);
     if (namespace == null) {
-      // return here?
-      throw new NamespaceNotFound();
+      return HTTP.fail(VersionResponse.error(new NamespaceNotFound(projectName)));
+
     }
     final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, projectName); // TODO: this might need to be com.seiama.javaducks.api.model.Project
     if (project == null) {
-      // return here?
-      throw new ProjectNotFound("No project found for namespace: " + namespace + " and project: " + projectName);
+      return HTTP.fail(VersionResponse.error(new ProjectNotFound(namespace, projectName)));
     }
-    final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().orElseThrow(VersionNotFound::new).versions().stream().filter(v -> v.name().equals(versionName)).findFirst().orElseThrow(VersionNotFound::new);
+    final AppConfiguration.EndpointConfiguration.Version version = this.configuration.endpoints().stream().filter(endpoint -> endpoint.name().equals(projectName)).findFirst().get().versions().stream().filter(v -> v.name().equals(versionName)).findFirst().get(); // TODO: get's bad
     return HTTP.cachedOk(VersionResponse.from(project.toApiModel(namespace, projectName), version, this.configuration), CACHE);
   }
 }

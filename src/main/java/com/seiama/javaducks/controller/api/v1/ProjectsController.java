@@ -24,16 +24,18 @@
 package com.seiama.javaducks.controller.api.v1;
 
 import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.v1.error.request.NamespaceNotFound;
+import com.seiama.javaducks.api.v1.error.request.ProjectNotFound;
+import com.seiama.javaducks.api.v1.response.ProjectResponse;
 import com.seiama.javaducks.api.v1.response.ProjectsResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.HTTP;
-import com.seiama.javaducks.util.exception.NamespaceNotFound;
-import com.seiama.javaducks.util.exception.ProjectNotFound;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,18 +67,19 @@ public final class ProjectsController {
   @Operation(summary = "Gets a list of all available projects.")
   public ResponseEntity<?> projects() {
     // TODO: clean this up
-    final List<Project> projects = this.configuration.endpoints().stream().map(endpoint -> {
+    final List<Project> projects = new ArrayList<>();
+
+    for (final AppConfiguration.EndpointConfiguration endpoint : this.configuration.endpoints()) {
       final @Nullable String namespace = this.configuration.namespaceFromProjectName(endpoint.name());
       if (namespace == null) {
-        // return here?
-        throw new NamespaceNotFound();
+        return HTTP.fail(ProjectResponse.error(new NamespaceNotFound(namespace)));
       }
       final AppConfiguration.Project project = this.configuration.projectFromNamespace(namespace, endpoint.name());
       if (project == null) {
-        throw new ProjectNotFound("No project found for namespace: " + namespace + " and project: " + endpoint.name());
+        return HTTP.fail(ProjectResponse.error(new ProjectNotFound(namespace, endpoint.name())));
       }
-      return new Project(namespace, endpoint.name(), project.displayName());
-    }).toList();
+      projects.add(new Project(namespace, endpoint.name(), project.displayName()));
+    }
     return HTTP.cachedOk(ProjectsResponse.success(projects), CACHE);
   }
 }

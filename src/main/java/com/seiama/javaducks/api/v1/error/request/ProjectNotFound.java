@@ -21,11 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.util.exception;
+package com.seiama.javaducks.api.v1.error.request;
 
-import java.io.Serial;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ErrorRequest;
+import com.seiama.javaducks.api.v1.error.ToError;
 
-public class VersionNotFound extends RuntimeException {
-  @Serial
-  private static final long serialVersionUID = 8764770241067509407L;
+public record ProjectNotFound(
+  String namespace,
+  String project
+) implements ErrorRequest, ToError {
+
+  @Override
+  public Error toError() {
+    return new Error("No project with name " + this.project + " found in namespace " + this.namespace, this);
+  }
 }

@@ -23,25 +23,42 @@
  */
 package com.seiama.javaducks.api.v1.response;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.api.model.Version;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ToError;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 @Schema
 public record ProjectResponse(
   @Schema(name = "ok")
   boolean ok,
   @Schema(name = "project", pattern = "[a-z]+", example = "paper")
-  Project project,
+  @Nullable Project project,
   @Schema(name = "versions")
-  List<Version> versions
+  @Nullable List<Version> versions,
+  @JsonUnwrapped
+  @Nullable
+  Error error
 ) {
   public static ProjectResponse from(final Project project, final List<Version> versions) {
     return new ProjectResponse(
       true,
       project,
-      versions
+      versions,
+      null
+    );
+  }
+
+  public static ProjectResponse error(final ToError error) {
+    return new ProjectResponse(
+      false,
+      null,
+      null,
+      error.toError()
     );
   }
 }

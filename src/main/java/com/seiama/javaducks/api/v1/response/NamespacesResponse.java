@@ -23,18 +23,28 @@
  */
 package com.seiama.javaducks.api.v1.response;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.seiama.javaducks.api.model.Namespace;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ToError;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 @Schema
 public record NamespacesResponse(
   @Schema(name = "ok")
   boolean ok,
   @Schema(name = "namespaces")
-  List<Namespace> namespaces
+  @Nullable List<Namespace> namespaces,
+  @JsonUnwrapped
+  @Nullable Error error
 ) {
   public static NamespacesResponse success(final List<Namespace> namespaces) {
-    return new NamespacesResponse(true, namespaces);
+    return new NamespacesResponse(true, namespaces, null);
+  }
+
+  public static NamespacesResponse error(final ToError error) {
+    return new NamespacesResponse(false, null, error.toError());
   }
 }
