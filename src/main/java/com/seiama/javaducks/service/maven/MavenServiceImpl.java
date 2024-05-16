@@ -38,12 +38,14 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -56,6 +58,7 @@ class MavenServiceImpl implements MavenService {
   private static final Logger LOGGER = LoggerFactory.getLogger(MavenServiceImpl.class);
   private static final Duration CACHED_METADATA_EXPIRATION = Duration.ofMinutes(5);
   private static final String USER_AGENT = "JavaDucks";
+  private static final MavenHashType[] HASH_TYPES = MavenHashType.values();
   private final RestClient restClient = RestClient.create();
   private final MavenConfiguration configuration;
 
@@ -140,88 +143,99 @@ class MavenServiceImpl implements MavenService {
           }
         }
       } else if (repository instanceof final MavenConfiguration.Repositories.Proxied proxied) {
-        final URI remoteUrl = proxied.url(url);
-
-        final Path path = proxied.cache().resolve(url);
-
-        // First we check if the file exceeds the lifetime for cached files
-        this.tryAndRemoveExpiredFile(path, lifetime);
-
-        @Nullable MavenHashPair hash = null;
-        if (shouldCheckHashes(url)) {
-          hash = this.downloadHash(remoteUrl);
-        }
-
-        if (Files.isRegularFile(path)) {
-          boolean canUseCachedAsset = true;
-          if (hash != null) {
-            try {
-              final String hashOfCachedAsset = hash.type().algorithm().hash(path).toString();
-              if (!hashOfCachedAsset.equals(hash.hash())) {
-                canUseCachedAsset = false;
-              }
-            } catch (final IOException e) {
-              LOGGER.error("Could not compute hash {} of cached asset {}", hash.type(), path);
-            }
-          }
-          if (canUseCachedAsset) {
-            try {
-              final byte[] bytes = Files.readAllBytes(path);
-              LOGGER.debug("Using non-expired cached file {} (hash: {}) for request {}", path, hash, url);
-              return new Artifact(path, bytes);
-            } catch (final IOException e) {
-              LOGGER.error("Could not read cached asset {}", path);
-              return null;
-            }
-          }
-        }
-
-        final ResponseEntity<byte[]> response;
-        try {
-          response = this.restClient.get()
-            .uri(proxied.url(url))
-            .header(HttpHeaders.USER_AGENT, USER_AGENT)
-            .retrieve()
-            .toEntity(byte[].class);
-        } catch (final HttpClientErrorException e) {
-          LOGGER.error("Could not fetch remote asset %s due to http error".formatted(remoteUrl), e);
-          return null;
-        }
-
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-          LOGGER.error("Could not fetch remote asset %s due to non-successful response".formatted(remoteUrl));
-          return null;
-        }
-
-        if (hash != null && shouldCheckHashes(url)) {
-          final String hashOfRemoteAsset = hash.type().algorithm().hash(response.getBody()).toString();
-          if (!hashOfRemoteAsset.equals(hash.hash())) {
-            LOGGER.warn("Could not verify remote asset {} due to {} hash mismatch - expected: {}, actual: {}", remoteUrl, hash.type(), hash.hash(), hashOfRemoteAsset);
-            return null;
-          }
-        }
-
-        final byte[] body = response.getBody();
-        try {
-          Files.createDirectories(path.getParent());
-        } catch (final IOException e) {
-          LOGGER.error("Could not create parent directories for asset {}", path);
-          return null;
-        }
-        try (final OutputStream os = Files.newOutputStream(path)) {
-          os.write(body.clone());
-        } catch (final IOException e) {
-          LOGGER.error("Could not write remote asset {} to local cache", path);
-          return null;
-        }
-        return new Artifact(path, body);
+        return this.getProxied(proxied, url, lifetime);
       }
     }
     return null;
   }
 
+  private @Nullable Artifact getProxied(
+    final MavenConfiguration.Repositories.@Nullable Proxied repository,
+    final String url,
+    final @Nullable Duration lifetime
+  ) {
+    if (repository != null) {
+      final URI remoteUrl = repository.url(url);
+
+      final Path path = repository.cache().resolve(url);
+
+      // First we check if the file exceeds the lifetime for cached files
+      this.tryAndRemoveExpiredFile(path, lifetime);
+
+      @Nullable MavenHashPair hash = null;
+      if (shouldCheckHashes(url)) {
+        hash = this.downloadHash(remoteUrl);
+      }
+
+      if (Files.isRegularFile(path)) {
+        boolean canUseCachedAsset = true;
+        if (hash != null) {
+          try {
+            final String hashOfCachedAsset = hash.type().algorithm().hash(path).toString();
+            if (!hashOfCachedAsset.equals(hash.hash())) {
+              canUseCachedAsset = false;
+            }
+          } catch (final IOException e) {
+            LOGGER.error("Could not compute hash {} of cached asset {}", hash.type(), path);
+          }
+        }
+        if (canUseCachedAsset) {
+          try {
+            final byte[] bytes = Files.readAllBytes(path);
+            LOGGER.debug("Using non-expired cached file {} (hash: {}) for request {}", path, hash, url);
+            return new Artifact(path, bytes);
+          } catch (final IOException e) {
+            LOGGER.error("Could not read cached asset {}", path);
+            return null;
+          }
+        }
+      }
+
+      final ResponseEntity<byte[]> response;
+      try {
+        response = this.restClient.get()
+          .uri(repository.url(url))
+          .header(HttpHeaders.USER_AGENT, USER_AGENT)
+          .retrieve()
+          .toEntity(byte[].class);
+      } catch (final HttpClientErrorException e) {
+        LOGGER.error("Could not fetch remote asset %s due to http error".formatted(remoteUrl), e);
+        return null;
+      }
+
+      if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+        LOGGER.error("Could not fetch remote asset %s due to non-successful response".formatted(remoteUrl));
+        return null;
+      }
+
+      if (hash != null && shouldCheckHashes(url)) {
+        final String hashOfRemoteAsset = hash.type().algorithm().hash(response.getBody()).toString();
+        if (!hashOfRemoteAsset.equals(hash.hash())) {
+          LOGGER.warn("Could not verify remote asset {} due to {} hash mismatch - expected: {}, actual: {}", remoteUrl, hash.type(), hash.hash(), hashOfRemoteAsset);
+          return null;
+        }
+      }
+
+      final byte[] body = response.getBody();
+      try {
+        Files.createDirectories(path.getParent());
+      } catch (final IOException e) {
+        LOGGER.error("Could not create parent directories for asset {}", path);
+        return null;
+      }
+      try (final OutputStream os = Files.newOutputStream(path)) {
+        os.write(body.clone());
+      } catch (final IOException e) {
+        LOGGER.error("Could not write remote asset {} to local cache", path);
+        return null;
+      }
+      return new Artifact(path, body);
+    }
+    return null;
+  }
+
   private static boolean shouldCheckHashes(final String url) {
-    return !url.endsWith(MavenConstants.METADATA_FILE_NAME);
+    return Arrays.stream(HASH_TYPES).noneMatch(type -> url.endsWith(type.extension()));
   }
 
   private void tryAndRemoveExpiredFile(final Path path, final @Nullable Duration lifetime) {
@@ -254,17 +268,29 @@ class MavenServiceImpl implements MavenService {
           .header(HttpHeaders.USER_AGENT, USER_AGENT)
           .retrieve()
           .toEntity(String.class);
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-          return new MavenHashPair(response.getBody(), type);
+        if (response.getStatusCode().is2xxSuccessful()) {
+          final String body = response.getBody();
+          if (body != null) {
+            return new MavenHashPair(body, type);
+          }
         }
       } catch (final Exception e) {
-        if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Could not download {} hash for X. Url: {}, Exception: {}: {}", type, hashUri, e.getClass().getName(), e.getMessage());
-        } else {
-          LOGGER.warn("Could not download {} hash for X. Url: {}, Exception: {}", type, hashUri, e.getClass().getName());
+        if (isActuallyAnException(e)) {
+          if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Could not download {} hash for X. Url: {}, Exception: {}: {}", type, hashUri, e.getClass().getName(), e.getMessage()); // TODO: better message
+          } else {
+            LOGGER.warn("Could not download {} hash for X. Url: {}, Exception: {}", type, hashUri, e.getClass().getName()); // TODO: better message
+          }
         }
       }
     }
     return null;
+  }
+
+  private static boolean isActuallyAnException(final Exception exception) {
+    if (exception instanceof final HttpClientErrorException e) {
+      return e.getStatusCode() != HttpStatus.NOT_FOUND;
+    }
+    return true;
   }
 }
