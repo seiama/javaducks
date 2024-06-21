@@ -67,7 +67,8 @@ public class JavadocController {
     ".css", MediaType.parseMediaType("text/css"),
     ".js", MediaType.parseMediaType("application/javascript"),
     ".zip", MediaType.parseMediaType("application/zip"),
-    ".html", MediaType.parseMediaType("text/html")
+    ".html", MediaType.parseMediaType("text/html"),
+    ".svg", MediaType.parseMediaType("image/svg+xml")
   );
   private final JavadocService service;
   private final JavadocInjector injector;
