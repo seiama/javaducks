@@ -21,32 +21,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.controller;
+package com.seiama.javaducks.api.v1.response;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import io.swagger.v3.oas.annotations.Operation;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.seiama.javaducks.api.model.Namespace;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ToError;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
 
-@Controller
-@NullMarked
-public class RootController {
-  private final AppConfiguration configuration;
-
-  @Autowired
-  public RootController(final AppConfiguration configuration) {
-    this.configuration = configuration;
+@Schema
+public record NamespacesResponse(
+  @Schema(name = "ok")
+  boolean ok,
+  @Schema(name = "namespaces")
+  @Nullable List<Namespace> namespaces,
+  @JsonUnwrapped
+  @Nullable Error error
+) {
+  public static NamespacesResponse success(final List<Namespace> namespaces) {
+    return new NamespacesResponse(true, namespaces, null);
   }
 
-  @GetMapping("/")
-  @Operation(summary = "Redirect to the root domain")
-  public ResponseEntity<?> redirectToDocs() {
-    return ResponseEntity.status(HttpStatus.FOUND)
-      .location(this.configuration.rootRedirect())
-      .build();
+  public static NamespacesResponse error(final ToError error) {
+    return new NamespacesResponse(false, null, error.toError());
   }
 }

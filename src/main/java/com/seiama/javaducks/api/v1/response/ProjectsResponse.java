@@ -21,32 +21,31 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.controller;
+package com.seiama.javaducks.api.v1.response;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import io.swagger.v3.oas.annotations.Operation;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.seiama.javaducks.api.model.Project;
+import com.seiama.javaducks.api.v1.error.Error;
+import com.seiama.javaducks.api.v1.error.ToError;
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
 
-@Controller
-@NullMarked
-public class RootController {
-  private final AppConfiguration configuration;
-
-  @Autowired
-  public RootController(final AppConfiguration configuration) {
-    this.configuration = configuration;
+@Schema
+public record ProjectsResponse(
+  @Schema(name = "ok")
+  boolean ok,
+  @Schema(name = "projects")
+  @Nullable List<Project> projects,
+  @JsonUnwrapped
+  @Nullable
+  Error error
+) {
+  public static ProjectsResponse success(final List<Project> projects) {
+    return new ProjectsResponse(true, projects, null);
   }
 
-  @GetMapping("/")
-  @Operation(summary = "Redirect to the root domain")
-  public ResponseEntity<?> redirectToDocs() {
-    return ResponseEntity.status(HttpStatus.FOUND)
-      .location(this.configuration.rootRedirect())
-      .build();
+  public static ProjectsResponse failure(final ToError error) {
+    return new ProjectsResponse(false, null, error.toError());
   }
 }
