@@ -160,7 +160,4 @@ tasks {
   checkstyleAotTest {
     isEnabled = false
   }
-  bootRun {
-    workingDir = file("run")
-  }
 }
