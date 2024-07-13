@@ -83,7 +83,7 @@ public class JavadocControllerTest {
   void testRedirect() throws Exception {
     this.mockMvc.perform(get("/paper/1.20/"))
       .andExpect(status().isFound())
-      .andExpect(redirectedUrl("/paper/1.20.4/"));
+      .andExpect(redirectedUrl("/paper/1.20.6/"));
   }
 
   @Test
@@ -122,7 +122,7 @@ public class JavadocControllerTest {
   void testOutdatedBannerInjection() throws Exception {
     this.mockMvc.perform(get("/paper/1.12/overview-summary.html"))
       .andExpect(status().isOk())
-      .andExpect(content().string(containsString("location.href.replace('paper/1.12/', 'paper/1.20.4/')")));
+      .andExpect(content().string(containsString("location.href.replace('paper/1.12/', 'paper/1.21/')")));
   }
 
   @Test
