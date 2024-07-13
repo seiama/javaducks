@@ -36,6 +36,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @NullMarked
 public record AppConfiguration(
   URI rootRedirect,
+  URI hostName,
   Path storage,
   List<EndpointConfiguration> endpoints,
   @DefaultValue({"SHA256", "SHA1"})
