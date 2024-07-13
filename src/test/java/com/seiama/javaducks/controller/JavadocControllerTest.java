@@ -81,9 +81,11 @@ public class JavadocControllerTest {
 
   @Test
   void testRedirect() throws Exception {
-    this.mockMvc.perform(get("/paper/1.20/"))
-      .andExpect(status().isFound())
-      .andExpect(redirectedUrl("/paper/1.20.4/"));
+    this.mockMvc.perform(get("/paper/1.20/org/bukkit/UnsafeValues.html?dum=dum#checkSupported(org.bukkit.plugin.PluginDescriptionFile)"))
+      .andExpect(status().isOk())
+      .andExpect(content().contentType(MediaType.TEXT_HTML))
+      .andExpect(content().string(containsString("<a href=\"/paper/1.20.4/org/bukkit/UnsafeValues.html?dum=dum\">")))
+      .andExpect(content().string(containsString("location.href.replace(\"/paper/1.20/\", \"/paper/1.20.4/\")")));
   }
 
   @Test

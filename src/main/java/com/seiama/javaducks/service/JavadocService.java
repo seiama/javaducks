@@ -88,11 +88,11 @@ public class JavadocService {
             case SNAPSHOT, RELEASE -> {
               final Path path = this.configuration.storage().resolve(key.project()).resolve(key.version() + ".jar");
               if (Files.isRegularFile(path)) {
-                yield new CachedLookup(FileSystems.newFileSystem(path), null);
+                yield new CachedLookup(FileSystems.newFileSystem(path), null, null);
               }
               yield null;
             }
-            case REDIRECT -> new CachedLookup(null, URI.create(config.path()));
+            case REDIRECT -> new CachedLookup(null, null, config.path());
           };
         }
         return null;
@@ -103,9 +103,11 @@ public class JavadocService {
     final CachedLookup lookup = this.contents.get(key);
     if (lookup != null) {
       if (lookup.fs() != null) {
-        return new Result(lookup.fs().getPath(path), null);
+        return new Result(lookup.fs().getPath(path), null, null);
       } else if (lookup.uri() != null) {
-        return new Result(null, lookup.uri());
+        return new Result(null, lookup.uri(), null);
+      } else if (lookup.redirect() != null) {
+        return new Result(null, null, lookup.redirect());
       }
     }
     return null;
@@ -273,7 +275,8 @@ public class JavadocService {
   @NullMarked
   record CachedLookup(
     @Nullable FileSystem fs,
-    @Nullable URI uri
+    @Nullable URI uri,
+    @Nullable String redirect
   ) implements AutoCloseable {
     @Override
     public void close() throws IOException {
@@ -286,7 +289,8 @@ public class JavadocService {
   @NullMarked
   public record Result(
     @Nullable Path file,
-    @Nullable URI uri
+    @Nullable URI uri,
+    @Nullable String redirect
   ) {
   }
 }
