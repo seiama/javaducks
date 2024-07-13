@@ -23,10 +23,12 @@
  */
 package com.seiama.javaducks.configuration.properties;
 
+import com.seiama.javaducks.api.model.Project;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -36,11 +38,31 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @NullMarked
 public record AppConfiguration(
   URI rootRedirect,
+  URI apiBaseUrl,
+  String apiTitle,
+  String apiVersion,
   Path storage,
   List<EndpointConfiguration> endpoints,
+  Map<String, Map<String, Project>> projects,
   @DefaultValue({"SHA256", "SHA1"})
   List<MavenHashType> hashTypes
 ) {
+
+  public @Nullable String namespaceFromProjectName(final String projectName) {
+    for (final Map.Entry<String, Map<String, Project>> entry : this.projects.entrySet()) {
+      for (final String name : entry.getValue().keySet()) {
+        if (name.equals(projectName)) {
+          return entry.getKey();
+        }
+      }
+    }
+    return null;
+  }
+
+  public @Nullable Project projectFromNamespace(final String namespace, final String projectName) {
+    final Map<String, Project> projects = this.projects.get(namespace);
+    return projects == null ? null : projects.get(projectName); // Could also return a dummy project with an empty namespace and displayName
+  }
 
   public EndpointConfiguration.@Nullable Version endpoint(final String endpointName, final String versionName) {
     for (final EndpointConfiguration endpoint : this.endpoints) {
@@ -56,6 +78,16 @@ public record AppConfiguration(
   }
 
   @NullMarked
+  public record Project(
+    String displayName
+  ) {
+    // TODO: ugly bad no
+    public com.seiama.javaducks.api.model.Project toApiModel(final String namespace, final String name) {
+      return new com.seiama.javaducks.api.model.Project(namespace, name, this.displayName);
+    }
+  }
+
+  @NullMarked
   public record EndpointConfiguration(
     String name,
     List<Version> versions
@@ -66,6 +98,8 @@ public record AppConfiguration(
       String path,
       Type type
     ) {
+      public static final String PATTERN = "[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?";
+
       public URI asset(final String name) {
         return URI.create(this.path + name);
       }

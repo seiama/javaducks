@@ -21,32 +21,47 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.controller;
+package com.seiama.javaducks.controller.api.v1;
 
+import com.seiama.javaducks.api.model.Namespace;
+import com.seiama.javaducks.api.v1.response.NamespacesResponse;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import com.seiama.javaducks.util.HTTP;
 import io.swagger.v3.oas.annotations.Operation;
-import org.jspecify.annotations.NullMarked;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.time.Duration;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-@NullMarked
-public class RootController {
+@RestController
+@RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+public final class NamespacesController {
+  private static final CacheControl CACHE = HTTP.sMaxAgePublicCache(Duration.ofDays(7));
   private final AppConfiguration configuration;
 
   @Autowired
-  public RootController(final AppConfiguration configuration) {
+  private NamespacesController(final AppConfiguration configuration) {
     this.configuration = configuration;
   }
 
-  @GetMapping("/")
-  @Operation(summary = "Redirect to the root domain")
-  public ResponseEntity<?> redirectToDocs() {
-    return ResponseEntity.status(HttpStatus.FOUND)
-      .location(this.configuration.rootRedirect())
-      .build();
+  @ApiResponse(
+    content = @Content(
+      schema = @Schema(implementation = NamespacesResponse.class)
+    ),
+    responseCode = "200"
+  )
+  @GetMapping("/api/v1/namespaces")
+  @Operation(summary = "Gets a list of all available namespaces.")
+  public ResponseEntity<?> namespaces() {
+    final List<Namespace> namespaces = this.configuration.projects().keySet().stream().map(Namespace::new).toList();
+    return HTTP.cachedOk(NamespacesResponse.success(namespaces), CACHE);
   }
 }

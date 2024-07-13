@@ -21,32 +21,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.seiama.javaducks.controller;
+package com.seiama.javaducks.util;
 
-import com.seiama.javaducks.configuration.properties.AppConfiguration;
-import io.swagger.v3.oas.annotations.Operation;
-import org.jspecify.annotations.NullMarked;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.time.Duration;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
 
-@Controller
-@NullMarked
-public class RootController {
-  private final AppConfiguration configuration;
-
-  @Autowired
-  public RootController(final AppConfiguration configuration) {
-    this.configuration = configuration;
+public final class HTTP {
+  private HTTP() {
   }
 
-  @GetMapping("/")
-  @Operation(summary = "Redirect to the root domain")
-  public ResponseEntity<?> redirectToDocs() {
-    return ResponseEntity.status(HttpStatus.FOUND)
-      .location(this.configuration.rootRedirect())
-      .build();
+  public static <T> ResponseEntity<T> cachedOk(final T response, final CacheControl cache) {
+    return ResponseEntity.ok().cacheControl(cache).body(response);
+  }
+
+  public static <T> ResponseEntity<T> fail(final T response) {
+    return ResponseEntity.badRequest().body(response); // TODO: badRequest is probably wrong?
+  }
+
+  public static CacheControl sMaxAgePublicCache(final Duration sMaxAge) {
+    return CacheControl.empty()
+      .cachePublic()
+      .sMaxAge(sMaxAge);
+  }
+
+  public static ContentDisposition attachmentDisposition(final Path filename) {
+    return ContentDisposition.attachment().filename(filename.getFileName().toString(), StandardCharsets.UTF_8).build();
   }
 }

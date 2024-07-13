@@ -63,7 +63,7 @@ public class JavadocController {
   private static final CacheControl CACHE_CONTROL = CacheControl.maxAge(Duration.ofMinutes(10));
   private static final CacheControl STATICS_CACHE_CONTROL = CacheControl.maxAge(Duration.ofDays(7));
   private static final ContentDisposition CONTENT_DISPOSITION = ContentDisposition.inline().build();
-  private static final Map<String, MediaType> MEDIATYPES = Map.of(
+  private static final Map<String, MediaType> MEDIA_TYPES = Map.of(
     ".css", MediaType.parseMediaType("text/css"),
     ".js", MediaType.parseMediaType("application/javascript"),
     ".zip", MediaType.parseMediaType("application/zip"),
@@ -120,7 +120,7 @@ public class JavadocController {
               headers.setContentDisposition(CONTENT_DISPOSITION);
               headers.set("X-JavaDucks", "Quack");
               final String name = file.getFileName().toString();
-              for (final Map.Entry<String, MediaType> entry : MEDIATYPES.entrySet()) {
+              for (final Map.Entry<String, MediaType> entry : MEDIA_TYPES.entrySet()) {
                 if (name.endsWith(entry.getKey())) {
                   headers.setContentType(entry.getValue());
                   break;

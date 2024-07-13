@@ -1,0 +1,138 @@
+app:
+  root-redirect: http://localhost:8059/
+  storage: storage/
+  hash-types: [SHA256, SHA1, MD5]
+  api-base-url: http://localhost:8059/
+
+  api-title: "JavaDucks API"
+  api-version: "v1"
+  projects:
+    papermc: # this is the namespace
+      folia:
+        display-name: "Folia"
+      paper:
+        display-name: "Paper"
+      velocity:
+        display-name: "Velocity"
+      waterfall:
+        display-name: "Waterfall"
+    misc:
+      protocollib:
+        display-name: "ProtocolLib"
+
+
+  endpoints:
+    - name: 'folia'
+      versions:
+        - name: '1.19'
+          path: 'https://repo.papermc.io/repository/maven-public/dev/folia/folia-api/1.19.4-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.20'
+          path: 'https://repo.papermc.io/repository/maven-public/dev/folia/folia-api/1.20.1-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+    - name: 'paper'
+      versions:
+        - name: '1.12'
+          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.12.2-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.13'
+          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.13.2-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.14'
+          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.14.4-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.15'
+          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.15.2-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.16'
+          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.16.5-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.17'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.17.1-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.18'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.18.2-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.19'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.19.4-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.20'
+          path: '/paper/1.20.6/'
+          type: 'REDIRECT'
+        - name: '1.20.4'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.4-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.20.5'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.5-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.20.6'
+          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.6-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+    - name: 'velocity'
+      versions:
+        - name: '3.0.0'
+          path: 'https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-api/3.3.0-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '3.3.0'
+          path: 'https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-api/3.3.0-SNAPSHOT/'
+          type: 'SNAPSHOT'
+    - name: 'waterfall'
+      versions:
+        - name: '1.12'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.12-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.13'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.13-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.14'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.14-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.15'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.15-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.16'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.16-R0.5-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.17'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.17-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.18'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.18-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.19'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.19-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+        - name: '1.20'
+          path: 'https://repo.papermc.io/repository/maven-public/io/github/waterfallmc/waterfall-api/1.20-R0.1-SNAPSHOT/'
+          type: 'SNAPSHOT'
+    - name: protocollib
+      versions:
+        - name: 5.2.0
+          path: https://repo.mizule.dev/releases/com/comphenix/protocol/ProtocolLib/5.2.0/ProtocolLib-5.2.0-javadoc.jar
+          type: RELEASE
+
+springdoc:
+  api-docs:
+    path: "/openapi"
+  show-actuator: false
+  swagger-ui:
+    disable-swagger-default-url: true
+    operations-sorter: "alpha"
+    path: "/docs/"
+    show-common-extensions: true
+
+server:
+  port : 8059
+logging:
+  level:
+    root: INFO
+#    com.seiama.javaducks: DEBUG
+
+management:
+  server:
+    port: 8081
+  endpoints:
+    enabled-by-default: true
+    web:
+      exposure:
+        include: "*"
