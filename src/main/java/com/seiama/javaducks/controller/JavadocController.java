@@ -23,6 +23,7 @@
  */
 package com.seiama.javaducks.controller;
 
+import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.service.JavadocService;
 import com.seiama.javaducks.service.javadoc.JavadocInjector;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
@@ -72,11 +73,13 @@ public class JavadocController {
   );
   private final JavadocService service;
   private final JavadocInjector injector;
+  private final AppConfiguration configuration;
 
   @Autowired
-  public JavadocController(final JavadocService service, final JavadocInjector injector) {
+  public JavadocController(final JavadocService service, final JavadocInjector injector, final AppConfiguration configuration) {
     this.service = service;
     this.injector = injector;
+    this.configuration = configuration;
   }
 
   @GetMapping("/{project:[a-z]+}/{version:[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?}")
@@ -88,6 +91,18 @@ public class JavadocController {
   ) {
     return status(HttpStatus.FOUND)
       .location(URI.create(request.getRequestURI() + "/"))
+      .build();
+  }
+
+  @GetMapping("/{project:[a-z]+}")
+  @ResponseBody
+  public ResponseEntity<?> serveLatestJavadoc(
+    final HttpServletRequest request,
+    @PathVariable final String project
+  ) {
+    final JavadocKey key = new JavadocKey(project, this.latestVersion(new JavadocKey(project, "")));
+    return status(HttpStatus.FOUND)
+      .location(URI.create("/%s/%s/".formatted(key.project(), key.version())))
       .build();
   }
 
@@ -151,5 +166,13 @@ public class JavadocController {
         .cacheControl(CacheControl.noCache())
         .build();
     }
+  }
+
+  private String latestVersion(final JavadocKey key) {
+    return this.configuration.endpoints().stream()
+      .filter(e -> e.name().equals(key.project()))
+      .findFirst()
+      .map(e -> e.versions().get(e.versions().size() - 1).name())
+      .orElse(key.version());
   }
 }
