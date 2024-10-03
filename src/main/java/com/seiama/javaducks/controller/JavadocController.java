@@ -156,7 +156,7 @@ public class JavadocController {
     }
   }
 
-  @GetMapping("/{project:[a-z]+}/")
+  @GetMapping("/{project:[a-z]+}")
   @ResponseBody
   public ResponseEntity<?> redirectToPathWithTrailingSlashServeLatestJavadoc(
     final HttpServletRequest request,
@@ -167,7 +167,7 @@ public class JavadocController {
       .build();
   }
 
-  @GetMapping("/{project:[a-z]+}")
+  @GetMapping("/{project:[a-z]+}/")
   @ResponseBody
   public ResponseEntity<?> serveLatestJavadoc(
     final HttpServletRequest request,
