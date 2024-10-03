@@ -162,9 +162,7 @@ public class JavadocController {
     final HttpServletRequest request,
     @PathVariable final String project
   ) {
-    return status(HttpStatus.FOUND)
-      .location(URI.create(request.getRequestURI() + "/"))
-      .build();
+    return serveLatestJavadoc(request, project);
   }
 
   @GetMapping("/{project:[a-z]+}/")

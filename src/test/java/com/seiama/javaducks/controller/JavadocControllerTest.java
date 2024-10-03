@@ -71,6 +71,13 @@ public class JavadocControllerTest {
   }
 
   @Test
+  void testServeLatest() throws Exception {
+    this.mockMvc.perform(get("/paper/"))
+      .andExpect(status().isFound())
+      .andExpect(redirectedUrl("/paper/1.21/"));
+  }
+
+  @Test
   void testSnapshot() throws Exception {
     this.mockMvc.perform(get("/paper/1.12/"))
       .andExpect(status().isOk())
