@@ -162,7 +162,7 @@ public class JavadocController {
     final HttpServletRequest request,
     @PathVariable final String project
   ) {
-    return serveLatestJavadoc(request, project);
+    return this.serveLatestJavadoc(request, project);
   }
 
   @GetMapping("/{project:[a-z]+}/")
