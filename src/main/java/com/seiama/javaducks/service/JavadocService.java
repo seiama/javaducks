@@ -191,7 +191,10 @@ public class JavadocService {
         LOGGER.warn("Could not update javadoc for {} {}. {} Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.type(), hashPair.hash(), downloadedHash);
         return;
       }
+      // first write the new file
       Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+      // then remove old cached file systems since they are now invalid
+      this.contents.invalidate(new JavadocKey(config.name(), version.name()));
     } catch (final Exception e) {
       LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Exception: {}: {}", config.name(), version.name(), jar, e.getClass().getName(), e.getMessage());
       return;
