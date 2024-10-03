@@ -82,29 +82,6 @@ public class JavadocController {
     this.configuration = configuration;
   }
 
-  @GetMapping("/{project:[a-z]+}/")
-  @ResponseBody
-  public ResponseEntity<?> redirectToPathWithTrailingSlashServeLatestJavadoc(
-    final HttpServletRequest request,
-    @PathVariable final String project
-  ) {
-    return status(HttpStatus.FOUND)
-      .location(URI.create(request.getRequestURI() + "/"))
-      .build();
-  }
-
-  @GetMapping("/{project:[a-z]+}")
-  @ResponseBody
-  public ResponseEntity<?> serveLatestJavadoc(
-    final HttpServletRequest request,
-    @PathVariable final String project
-  ) {
-    final JavadocKey key = new JavadocKey(project, this.latestVersion(new JavadocKey(project, "")));
-    return status(HttpStatus.FOUND)
-      .location(URI.create("/%s/%s/".formatted(key.project(), key.version())))
-      .build();
-  }
-
   @GetMapping("/{project:[a-z]+}/{version:[0-9.]+-?(?:pre|SNAPSHOT)?(?:[0-9.]+)?}")
   @ResponseBody
   public ResponseEntity<?> redirectToPathWithTrailingSlash(
@@ -177,6 +154,29 @@ public class JavadocController {
         .cacheControl(CacheControl.noCache())
         .build();
     }
+  }
+
+  @GetMapping("/{project:[a-z]+}/")
+  @ResponseBody
+  public ResponseEntity<?> redirectToPathWithTrailingSlashServeLatestJavadoc(
+    final HttpServletRequest request,
+    @PathVariable final String project
+  ) {
+    return status(HttpStatus.FOUND)
+      .location(URI.create(request.getRequestURI() + "/"))
+      .build();
+  }
+
+  @GetMapping("/{project:[a-z]+}")
+  @ResponseBody
+  public ResponseEntity<?> serveLatestJavadoc(
+    final HttpServletRequest request,
+    @PathVariable final String project
+  ) {
+    final JavadocKey key = new JavadocKey(project, this.latestVersion(new JavadocKey(project, "")));
+    return status(HttpStatus.FOUND)
+      .location(URI.create("/%s/%s/".formatted(key.project(), key.version())))
+      .build();
   }
 
   private String latestVersion(final JavadocKey key) {
