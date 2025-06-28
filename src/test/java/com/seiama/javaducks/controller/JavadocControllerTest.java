@@ -78,6 +78,13 @@ public class JavadocControllerTest {
   }
 
   @Test
+  void testServeLatestRetainingPath() throws Exception {
+    this.mockMvc.perform(get("/paper/co/aikar/timings/package-summary.html"))
+      .andExpect(status().isFound())
+      .andExpect(redirectedUrl("/paper/1.21/co/aikar/timings/package-summary.html"));
+  }
+
+  @Test
   void testSnapshot() throws Exception {
     this.mockMvc.perform(get("/paper/1.12/"))
       .andExpect(status().isOk())
