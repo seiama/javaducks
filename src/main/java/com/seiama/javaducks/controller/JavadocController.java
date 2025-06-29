@@ -165,15 +165,22 @@ public class JavadocController {
     return this.serveLatestJavadoc(request, project);
   }
 
-  @GetMapping("/{project:[a-z]+}/")
+  @GetMapping("/{project:[a-z]+}/**")
   @ResponseBody
   public ResponseEntity<?> serveLatestJavadoc(
     final HttpServletRequest request,
     @PathVariable final String project
   ) {
+    final String path = request.getRequestURI().substring(request.getContextPath().length());
+    String remainingPath = path.substring(project.length() + 1);
     final JavadocKey key = new JavadocKey(project, this.latestVersion(new JavadocKey(project, "")));
+
+    if (remainingPath.startsWith("/")) {
+      remainingPath = remainingPath.substring(1);
+    }
+
     return status(HttpStatus.FOUND)
-      .location(URI.create("/%s/%s/".formatted(key.project(), key.version())))
+      .location(URI.create("/%s/%s/%s".formatted(project, key.version(), remainingPath)))
       .build();
   }
 
