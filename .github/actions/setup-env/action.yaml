@@ -10,14 +10,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - name: "gradle / validate wrapper"
-    uses: "gradle/actions/wrapper-validation@v3"
   - name: "java ${{ inputs.java-version }}"
-    uses: "actions/setup-java@v3"
+    uses: "actions/setup-java@v4"
     with:
       distribution: "zulu"
       java-version: "${{ inputs.java-version }}"
   - name: "gradle / initialize"
-    uses: "gradle/actions/setup-gradle@v3"
+    uses: "gradle/actions/setup-gradle@v4"
     with:
       cache-read-only: "${{ github.ref != 'refs/heads/main' || github.event_name == 'pull_request' }}"
