@@ -23,15 +23,15 @@
  */
 package com.seiama.javaducks.service;
 
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
+import com.seiama.javaducks.model.MavenMetadata;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
-import com.seiama.javaducks.util.exception.HashNotFoundException;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -40,9 +40,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import org.apache.maven.artifact.repository.metadata.Metadata;
-import org.apache.maven.artifact.repository.metadata.Snapshot;
-import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -59,6 +56,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class JavadocService {
   private static final Logger LOGGER = LoggerFactory.getLogger(JavadocService.class);
+  private static final XmlMapper XML_MAPPER = new XmlMapper();
   private static final long REFRESH_INITIAL_DELAY = 0; // in minutes
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
@@ -159,23 +157,25 @@ public class JavadocService {
     // get hash
     final MavenHashPair hashPair = this.downloadHash(config, jar, version);
 
-    // check hash
-    if (Files.isReadable(versionPath)) {
-      try {
-        final String hashOnDisk = hashPair.type().algorithm().hash(versionPath).toString();
-        if (hashOnDisk.equals(hashPair.hash())) {
-          LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
-          return;
+    if (hashPair != null) {
+      // check hash
+      if (Files.isReadable(versionPath)) {
+        try {
+          final String hashOnDisk = hashPair.type().algorithm().hash(versionPath).toString();
+          if (hashOnDisk.equals(hashPair.hash())) {
+            LOGGER.debug("Javadoc for {} {} is up to date", config.name(), version.name());
+            return;
+          }
+        } catch (final IOException e) {
+          throw new RuntimeException(e);
         }
-      } catch (final IOException e) {
-        throw new RuntimeException(e);
       }
     }
 
     this.downloadJar(config, version, jar, hashPair, versionPath);
   }
 
-  private void downloadJar(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final URI jar, final MavenHashPair hashPair, final Path versionPath) {
+  private void downloadJar(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final URI jar, final @Nullable MavenHashPair hashPair, final Path versionPath) {
     try {
       final ResponseEntity<byte[]> response = this.restClient.get()
         .uri(jar)
@@ -186,10 +186,12 @@ public class JavadocService {
         LOGGER.warn("Could not update javadoc for {} {}. Couldn't download jar. Url: {}, Status code: {}", config.name(), version.name(), jar, response.getStatusCode());
         return;
       }
-      final String downloadedHash = hashPair.type().algorithm().hash(response.getBody()).toString();
-      if (!downloadedHash.equals(hashPair.hash())) {
-        LOGGER.warn("Could not update javadoc for {} {}. {} Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.type(), hashPair.hash(), downloadedHash);
-        return;
+      if (hashPair != null) {
+        final String downloadedHash = hashPair.type().algorithm().hash(response.getBody()).toString();
+        if (!downloadedHash.equals(hashPair.hash())) {
+          LOGGER.warn("Could not update javadoc for {} {}. {} Hash mismatch. Expected: {}, got: {}", config.name(), version.name(), hashPair.type(), hashPair.hash(), downloadedHash);
+          return;
+        }
       }
       // first write the new file
       Files.write(versionPath, response.getBody(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -207,7 +209,7 @@ public class JavadocService {
       case RELEASE, REDIRECT -> URI.create(version.path());
       case SNAPSHOT -> {
         final URI metaDataUri = version.asset(MAVEN_METADATA);
-        final Metadata metadata;
+        final MavenMetadata metadata;
         try {
           final ResponseEntity<String> response = this.restClient.get()
             .uri(metaDataUri)
@@ -218,31 +220,29 @@ public class JavadocService {
             LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
             yield null;
           }
-          final MetadataXpp3Reader reader = new MetadataXpp3Reader();
-          metadata = reader.read(new StringReader(response.getBody()), true);
+          metadata = XML_MAPPER.readValue(response.getBody(), MavenMetadata.class);
         } catch (final Exception e) {
           LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
           yield null;
         }
 
-        final @Nullable Snapshot snapshot = metadata.getVersioning().getSnapshot();
-        if (snapshot != null) {
-          yield version.asset(String.format(
-            "%s-%s-%s-%d-javadoc.jar",
-            metadata.getArtifactId(),
-            metadata.getVersion().replace("-SNAPSHOT", ""),
-            snapshot.getTimestamp(),
-            snapshot.getBuildNumber()
-          ));
-        } else {
-          LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
-          yield null;
+        // paper-api-1.12.2-R0.1-20190630.041412-412-javadoc.jar
+        for (final MavenMetadata.Versioning.SnapshotVersion snapshot : metadata.versioning().snapshotVersions()) {
+          if (snapshot.classifier().equals("javadoc")) {
+            yield version.asset(String.format(
+              "%s-%s-javadoc.jar",
+              metadata.artifactId(),
+              snapshot.value()
+            ));
+          }
         }
+        LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
+        yield null;
       }
     };
   }
 
-  public MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri, final AppConfiguration.EndpointConfiguration.Version version) {
+  public @Nullable MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri, final AppConfiguration.EndpointConfiguration.Version version) {
     for (final MavenHashType hashType : this.configuration.hashTypes()) {
       final URI hashUri = UriComponentsBuilder.fromUri(jarUri).replacePath(jarUri.getPath() + "." + hashType.extension()).build().toUri();
       try {
@@ -263,7 +263,7 @@ public class JavadocService {
         }
       }
     }
-    throw new HashNotFoundException(config.name(), version.name());
+    return null; // throw new HashNotFoundException(config.name(), version.name());
   }
 
   @NullMarked
