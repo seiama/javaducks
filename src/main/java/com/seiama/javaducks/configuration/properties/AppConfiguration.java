@@ -39,7 +39,7 @@ public record AppConfiguration(
   URI hostName,
   Path storage,
   List<EndpointConfiguration> endpoints,
-  @DefaultValue({"SHA256", "SHA1"})
+  @DefaultValue({"SHA512", "SHA256", "SHA1"})
   List<MavenHashType> hashTypes
 ) {
 
