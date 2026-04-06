@@ -1,3 +1,8 @@
+spring:
+  http:
+    client:
+      redirects: follow
+
 app:
   root-redirect: 'https://papermc.io/javadocs'
   host-name: 'https://jd.papermc.io'

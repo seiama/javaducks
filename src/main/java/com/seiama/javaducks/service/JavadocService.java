@@ -33,7 +33,6 @@ import com.seiama.javaducks.service.javadoc.JavadocKey;
 import com.seiama.javaducks.util.maven.MavenHashType;
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -48,7 +47,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -63,17 +61,14 @@ public class JavadocService {
   private static final long REFRESH_RATE = 15; // in minutes
   private static final String USER_AGENT = "JavaDucks";
   private static final String MAVEN_METADATA = "maven-metadata.xml";
-  private final RestClient restClient = RestClient.builder()
-    .requestFactory(new JdkClientHttpRequestFactory(HttpClient.newBuilder()
-      .followRedirects(HttpClient.Redirect.NORMAL)
-      .build()))
-    .build();
+  private final RestClient restClient;
   private final AppConfiguration configuration;
   private final LoadingCache<JavadocKey, CachedLookup> contents;
 
   @Autowired
-  public JavadocService(final AppConfiguration configuration) {
+  public JavadocService(final AppConfiguration configuration, final RestClient.Builder restClientBuilder) {
     this.configuration = configuration;
+    this.restClient = restClientBuilder.build();
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
       .removalListener((RemovalListener<JavadocKey, CachedLookup>) (key, value, cause) -> {
