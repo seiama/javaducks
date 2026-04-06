@@ -39,7 +39,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -67,8 +69,12 @@ public class JavadocService {
 
   @Autowired
   public JavadocService(final AppConfiguration configuration, final RestClient.Builder restClientBuilder) {
+    this(configuration, restClientBuilder.build());
+  }
+
+  JavadocService(final AppConfiguration configuration, final RestClient restClient) {
     this.configuration = configuration;
-    this.restClient = restClientBuilder.build();
+    this.restClient = restClient;
     this.contents = Caffeine.newBuilder()
       .refreshAfterWrite(Duration.ofMinutes(10))
       .removalListener((RemovalListener<JavadocKey, CachedLookup>) (key, value, cause) -> {
@@ -84,14 +90,14 @@ public class JavadocService {
         final AppConfiguration.EndpointConfiguration.Version config = this.configuration.endpoint(key.project(), key.version());
         if (config != null) {
           return switch (config.type()) {
-            case SNAPSHOT, RELEASE -> {
+            case MAVEN -> {
               final Path path = this.configuration.storage().resolve(key.project()).resolve(key.version() + ".jar");
               if (Files.isRegularFile(path)) {
                 yield new CachedLookup(FileSystems.newFileSystem(path), null);
               }
               yield null;
             }
-            case REDIRECT -> new CachedLookup(null, URI.create(config.path()));
+            case REDIRECT -> new CachedLookup(null, config.redirectUri());
           };
         }
         return null;
@@ -150,7 +156,7 @@ public class JavadocService {
     }
 
     // don't download again if it's a release
-    if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE && Files.exists(versionPath)) {
+    if (version.type() == AppConfiguration.EndpointConfiguration.Version.Type.MAVEN && !version.isSnapshot() && !version.isChangingRelease() && Files.exists(versionPath)) {
       LOGGER.debug("Javadoc for {} {} is a release and will not be updated", config.name(), version.name());
       return;
     }
@@ -207,40 +213,98 @@ public class JavadocService {
 
   private @Nullable URI resolveUriFor(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version) {
     return switch (version.type()) {
-      case RELEASE, REDIRECT -> URI.create(version.path());
-      case SNAPSHOT -> {
-        final URI metaDataUri = version.asset(MAVEN_METADATA);
-        final MavenMetadata metadata;
-        try {
-          final ResponseEntity<String> response = this.restClient.get()
-            .uri(metaDataUri)
-            .header(HttpHeaders.USER_AGENT, USER_AGENT)
-            .retrieve()
-            .toEntity(String.class);
-          if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
+      case REDIRECT -> version.redirectUri();
+      case MAVEN -> {
+        if (version.isChangingRelease()) {
+          final MavenMetadata metadata = this.fetchMetadata(config, version, version.artifactMetadata());
+          if (metadata == null) {
             yield null;
           }
-          metadata = XML_MAPPER.readValue(response.getBody(), MavenMetadata.class);
-        } catch (final Exception e) {
-          LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
+
+          final @Nullable String selectedVersion = this.selectChangingReleaseVersion(config, version, metadata.versioning().versions());
+          if (selectedVersion == null) {
+            yield null;
+          }
+
+          yield version.javadocJar(selectedVersion);
+        }
+
+        if (!version.isSnapshot()) {
+          yield version.javadocJar();
+        }
+
+        final MavenMetadata metadata = this.fetchMetadata(config, version, version.versionMetadata());
+        if (metadata == null) {
           yield null;
         }
 
         // paper-api-1.12.2-R0.1-20190630.041412-412-javadoc.jar
         for (final MavenMetadata.Versioning.SnapshotVersion snapshot : metadata.versioning().snapshotVersions()) {
           if (snapshot.classifier().equals("javadoc")) {
-            yield version.asset(String.format(
-              "%s-%s-javadoc.jar",
-              metadata.artifactId(),
-              snapshot.value()
-            ));
+            yield version.snapshotJavadocJar(snapshot.value());
           }
         }
         LOGGER.warn("Could not find latest version for {} {}", config.name(), version.name());
         yield null;
       }
     };
+  }
+
+  private @Nullable MavenMetadata fetchMetadata(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final URI metaDataUri) {
+    try {
+      final ResponseEntity<String> response = this.restClient.get()
+        .uri(metaDataUri)
+        .header(HttpHeaders.USER_AGENT, USER_AGENT)
+        .retrieve()
+        .toEntity(String.class);
+      if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+        LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Status code: {}", config.name(), version.name(), metaDataUri, response.getStatusCode());
+        return null;
+      }
+      return XML_MAPPER.readValue(response.getBody(), MavenMetadata.class);
+    } catch (final Exception e) {
+      LOGGER.warn("Could not fetch metadata for {} {}. Url: {}, Exception: {}: {}", config.name(), version.name(), metaDataUri, e.getClass().getName(), e.getMessage());
+      return null;
+    }
+  }
+
+  private @Nullable String selectChangingReleaseVersion(final AppConfiguration.EndpointConfiguration config, final AppConfiguration.EndpointConfiguration.Version version, final List<String> versions) {
+    final String prefix = version.changingReleasePrefix();
+    final Stream<String> candidates = versions.stream().filter(candidate -> candidate.startsWith(prefix));
+    return candidates.max(this::compareSelectorVersions).orElseGet(() -> {
+      LOGGER.warn("Could not find matching changing release for {} {} using prefix {}", config.name(), version.name(), prefix);
+      return null;
+    });
+  }
+
+  private int compareSelectorVersions(final String left, final String right) {
+    final String[] leftParts = left.split("[.-]");
+    final String[] rightParts = right.split("[.-]");
+    final int length = Math.max(leftParts.length, rightParts.length);
+    for (int i = 0; i < length; i++) {
+      final String leftPart = i < leftParts.length ? leftParts[i] : "";
+      final String rightPart = i < rightParts.length ? rightParts[i] : "";
+      final int comparison = this.compareSelectorPart(leftPart, rightPart);
+      if (comparison != 0) {
+        return comparison;
+      }
+    }
+    return 0;
+  }
+
+  private int compareSelectorPart(final String left, final String right) {
+    final boolean leftNumeric = !left.isEmpty() && left.chars().allMatch(Character::isDigit);
+    final boolean rightNumeric = !right.isEmpty() && right.chars().allMatch(Character::isDigit);
+    if (leftNumeric && rightNumeric) {
+      return Integer.compare(Integer.parseInt(left), Integer.parseInt(right));
+    }
+    if (leftNumeric) {
+      return 1;
+    }
+    if (rightNumeric) {
+      return -1;
+    }
+    return left.compareTo(right);
   }
 
   public @Nullable MavenHashPair downloadHash(final AppConfiguration.EndpointConfiguration config, final URI jarUri, final AppConfiguration.EndpointConfiguration.Version version) {

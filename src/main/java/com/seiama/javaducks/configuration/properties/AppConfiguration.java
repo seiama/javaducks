@@ -27,6 +27,7 @@ import com.seiama.javaducks.util.maven.MavenHashType;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -64,17 +65,71 @@ public record AppConfiguration(
     @NullMarked
     public record Version(
       String name,
-      String path,
+      @Nullable String path,
+      @Nullable URI repository,
+      @Nullable String group,
+      @Nullable String artifact,
+      @Nullable String version,
       Type type
     ) {
-      public URI asset(final String name) {
-        return URI.create(this.path + name);
+      public URI redirectUri() {
+        return URI.create(Objects.requireNonNull(this.path, "path"));
+      }
+
+      public URI artifactMetadata() {
+        return URI.create(this.mavenArtifactBase() + "maven-metadata.xml");
+      }
+
+      public URI versionMetadata() {
+        return URI.create(this.mavenVersionBase(Objects.requireNonNull(this.version, "version")) + "maven-metadata.xml");
+      }
+
+      public URI snapshotJavadocJar(final String snapshotVersion) {
+        return URI.create(this.mavenVersionBase(Objects.requireNonNull(this.version, "version")) + this.requireArtifact() + "-" + snapshotVersion + "-javadoc.jar");
+      }
+
+      public URI javadocJar() {
+        return this.javadocJar(Objects.requireNonNull(this.version, "version"));
+      }
+
+      public URI javadocJar(final String resolvedVersion) {
+        return URI.create(this.mavenArtifactBase() + resolvedVersion + "/" + this.requireArtifact() + "-" + resolvedVersion + "-javadoc.jar");
+      }
+
+      private String mavenArtifactBase() {
+        final String repositoryString = Objects.requireNonNull(this.repository, "repository").toString();
+        final String normalizedRepository = repositoryString.endsWith("/") ? repositoryString : repositoryString + "/";
+        return normalizedRepository + this.requireGroup().replace('.', '/') + "/" + this.requireArtifact() + "/";
+      }
+
+      private String mavenVersionBase(final String version) {
+        return this.mavenArtifactBase() + version + "/";
+      }
+
+      private String requireGroup() {
+        return Objects.requireNonNull(this.group, "group");
+      }
+
+      private String requireArtifact() {
+        return Objects.requireNonNull(this.artifact, "artifact");
+      }
+
+      public boolean isSnapshot() {
+        return Objects.requireNonNull(this.version, "version").endsWith("-SNAPSHOT");
+      }
+
+      public boolean isChangingRelease() {
+        return Objects.requireNonNull(this.version, "version").endsWith("+");
+      }
+
+      public String changingReleasePrefix() {
+        final String resolvedVersion = Objects.requireNonNull(this.version, "version");
+        return resolvedVersion.substring(0, resolvedVersion.length() - 1);
       }
 
       @NullMarked
       public enum Type {
-        SNAPSHOT,
-        RELEASE,
+        MAVEN,
         REDIRECT,
       }
     }
