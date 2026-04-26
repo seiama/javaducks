@@ -32,6 +32,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NullMarked;
@@ -188,7 +189,10 @@ public class JavadocController {
     return this.configuration.endpoints().stream()
       .filter(e -> e.name().equals(key.project()))
       .findFirst()
-      .map(e -> e.versions().get(e.versions().size() - 1).name())
+      .map(e -> {
+        final List<AppConfiguration.EndpointConfiguration.Version> list = e.versions().stream().filter(version -> version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE).toList();
+        return list.isEmpty() ? key.version() : list.get(list.size() - 1).name();
+      })
       .orElse(key.version());
   }
 }

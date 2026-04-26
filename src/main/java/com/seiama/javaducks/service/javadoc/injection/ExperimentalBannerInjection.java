@@ -29,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.core.io.ClassPathResource;
@@ -37,13 +38,15 @@ import org.springframework.util.StringUtils;
 
 @Component
 @NullMarked
-public class OutdatedBannerInjection implements Injection {
+public class ExperimentalBannerInjection implements Injection {
+  private static final Pattern EXPERIMENTAL_RELEASE_PATTERN = Pattern.compile("\\b(?:rc|pre)\\b", Pattern.CASE_INSENSITIVE);
+
   private final AppConfiguration configuration;
   private final String template;
 
-  public OutdatedBannerInjection(final AppConfiguration configuration) {
+  public ExperimentalBannerInjection(final AppConfiguration configuration) {
     this.configuration = configuration;
-    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource("outdated-banner.html").getInputStream()))) {
+    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource("experimental-banner.html").getInputStream()))) {
       this.template = reader.lines().collect(Collectors.joining("\n"));
     } catch (final Exception e) {
       throw new RuntimeException(e);
@@ -52,7 +55,7 @@ public class OutdatedBannerInjection implements Injection {
 
   @Override
   public boolean canInject(final Path file, final JavadocKey key) {
-    return file.toString().endsWith(HTML) && !key.version().equals(this.latestVersion(key));
+    return file.toString().endsWith(HTML) && this.experimentalVersion(key);
   }
 
   @Override
@@ -68,6 +71,10 @@ public class OutdatedBannerInjection implements Injection {
       );
     }
     return line;
+  }
+
+  private boolean experimentalVersion(final JavadocKey key) {
+    return EXPERIMENTAL_RELEASE_PATTERN.matcher(key.version()).find();
   }
 
   private String latestVersion(final JavadocKey key) {

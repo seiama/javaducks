@@ -1,0 +1,23 @@
+<style>
+  .outdated-banner {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    padding: 5px;
+    background-color: hsl(27, 100%, 60%);;
+    color: #ffffff;
+    cursor: pointer;
+  }
+
+  .outdated-banner:hover {
+    background-color: hsl(27, 100%, 65%);
+    text-decoration: underline;
+  }
+</style>
+<a class="outdated-banner" onclick="location.href = location.href.replace('%3$s', '%4$s');">
+  <span class="outdated-banner__content">
+    You are looking at experimental Javadocs for %1$s.
+    Click here to look at stable %2$s instead.
+  </span>
+</a>
+%5$s

@@ -26,6 +26,7 @@ package com.seiama.javaducks.service.javadoc.injection;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.service.javadoc.JavadocKey;
 import java.nio.file.Path;
+import java.util.List;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
@@ -48,7 +49,7 @@ public class OutdatedRobotHeaderInjection implements Injection {
   public String inject(final String line, final Path file, final JavadocKey key) {
     if (line.contains("</head>")) {
       return "<link rel=\"canonical\" href=\"%s\">\n%s".formatted(
-        this.configuration.hostName().resolve(key.project() + "/" + this.isLatestVersion(key).latest() + "/" + file.toString()),
+        this.configuration.hostName().resolve(key.project() + "/" + this.isLatestVersion(key).latest() + "/" + file),
         line
       );
     }
@@ -60,7 +61,8 @@ public class OutdatedRobotHeaderInjection implements Injection {
       .filter(e -> e.name().equals(key.project()))
       .findFirst()
       .map(e -> {
-        final String latestVersion = e.versions().get(e.versions().size() - 1).name();
+        final List<AppConfiguration.EndpointConfiguration.Version> list = e.versions().stream().filter(version -> version.type() == AppConfiguration.EndpointConfiguration.Version.Type.RELEASE).toList();
+        final String latestVersion = list.get(list.size() - 1).name();
         final boolean isLatest = latestVersion.equals(key.version());
         return new LatestPair(isLatest, latestVersion);
       })
