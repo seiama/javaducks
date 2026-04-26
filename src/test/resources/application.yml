@@ -1,3 +1,8 @@
+spring:
+  http:
+    client:
+      redirects: follow
+
 app:
   root-redirect: 'https://papermc.io/javadocs'
   host-name: 'https://jd.papermc.io'
@@ -6,22 +11,38 @@ app:
     - name: 'paper'
       versions:
         - name: '1.12'
-          path: 'https://repo.papermc.io/repository/maven-public/com/destroystokyo/paper/paper-api/1.12.2-R0.1-SNAPSHOT/'
-          type: 'SNAPSHOT'
+          repository: 'https://repo.papermc.io/repository/maven-public/'
+          group: 'com.destroystokyo.paper'
+          artifact: 'paper-api'
+          version: '1.12.2-R0.1-SNAPSHOT'
+          type: 'MAVEN'
         - name: '1.20'
           path: '/paper/1.20.6/'
           type: 'REDIRECT'
         - name: '1.20.4'
-          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.4-R0.1-SNAPSHOT/'
-          type: 'SNAPSHOT'
+          repository: 'https://repo.papermc.io/repository/maven-public/'
+          group: 'io.papermc.paper'
+          artifact: 'paper-api'
+          version: '1.20.4-R0.1-SNAPSHOT'
+          type: 'MAVEN'
         - name: '1.20.6'
-          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.20.6-R0.1-SNAPSHOT/'
-          type: 'SNAPSHOT'
+          repository: 'https://repo.papermc.io/repository/maven-public/'
+          group: 'io.papermc.paper'
+          artifact: 'paper-api'
+          version: '1.20.6-R0.1-SNAPSHOT'
+          type: 'MAVEN'
         - name: '1.21'
-          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/1.21-R0.1-SNAPSHOT/'
-          type: 'SNAPSHOT'
+          repository: 'https://repo.papermc.io/repository/maven-public/'
+          group: 'io.papermc.paper'
+          artifact: 'paper-api'
+          version: '1.21-R0.1-SNAPSHOT'
+          type: 'MAVEN'
     - name: 'paperlib'
       versions:
         - name: '1.0.8'
-          path: 'https://repo.papermc.io/repository/maven-public/io/papermc/paperlib/1.0.8/paperlib-1.0.8-javadoc.jar'
-          type: 'RELEASE'
+          repository: 'https://repo.papermc.io/repository/maven-public/'
+          group: 'io.papermc'
+          artifact: 'paperlib'
+          version: '1.0.8'
+          type: 'MAVEN'
+
