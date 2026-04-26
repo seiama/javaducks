@@ -26,18 +26,18 @@ package com.seiama.javaducks.service;
 import com.seiama.javaducks.configuration.properties.AppConfiguration;
 import com.seiama.javaducks.util.crypto.HashAlgorithm;
 import com.seiama.javaducks.util.maven.MavenHashType;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class JavadocServiceTest {
 
@@ -45,75 +45,86 @@ class JavadocServiceTest {
   void refreshAllResolvesPinnedReleaseToJavadocJar() throws Exception {
     final byte[] jarBytes = "jar".getBytes(StandardCharsets.UTF_8);
     final String sha512 = HashAlgorithm.SHA512.hash(jarBytes).toString();
-    final HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-    server.createContext("/io/papermc/paper/paper-api/26.1.1.build.28-alpha/paper-api-26.1.1.build.28-alpha-javadoc.jar", exchange -> this.respond(exchange, jarBytes));
-    server.createContext("/io/papermc/paper/paper-api/26.1.1.build.28-alpha/paper-api-26.1.1.build.28-alpha-javadoc.jar.sha512", exchange -> this.respond(exchange, sha512));
-    server.start();
-    try {
-      final Path storage = Files.createTempDirectory("javaducks-pinned-release");
-      final AppConfiguration configuration = new AppConfiguration(
-        java.net.URI.create("https://example.com"),
-        java.net.URI.create("https://example.com"),
-        storage,
-        List.of(new AppConfiguration.EndpointConfiguration(
-          "paper",
-          List.of(new AppConfiguration.EndpointConfiguration.Version(
-            "26.1.1",
-            null,
-            java.net.URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/"),
-            "io.papermc.paper",
-            "paper-api",
-            "26.1.1.build.28-alpha",
-            AppConfiguration.EndpointConfiguration.Version.Type.MAVEN
-          ))
-        )),
-        List.of(MavenHashType.SHA512)
-      );
 
-      new JavadocService(configuration, RestClient.create()).refreshAll();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-      assertThat(Files.readAllBytes(storage.resolve("paper").resolve("26.1.1.jar"))).isEqualTo(jarBytes);
-    } finally {
-      server.stop(0);
-    }
+    final String jarUri = "http://repo.test/io/papermc/paper/paper-api/26.1.1.build.28-alpha/paper-api-26.1.1.build.28-alpha-javadoc.jar";
+    final String hashUri = jarUri + ".sha512";
+
+    server.expect(requestTo(hashUri)).andRespond(withSuccess(sha512, MediaType.TEXT_PLAIN));
+    server.expect(requestTo(jarUri)).andRespond(withSuccess(jarBytes, MediaType.APPLICATION_OCTET_STREAM));
+
+    final Path storage = Files.createTempDirectory("javaducks-pinned-release");
+    final AppConfiguration configuration = new AppConfiguration(
+      java.net.URI.create("https://example.com"),
+      java.net.URI.create("https://example.com"),
+      storage,
+      List.of(new AppConfiguration.EndpointConfiguration(
+        "paper",
+        List.of(new AppConfiguration.EndpointConfiguration.Version(
+          "26.1.1",
+          null,
+          java.net.URI.create("http://repo.test/"),
+          "io.papermc.paper",
+          "paper-api",
+          "26.1.1.build.28-alpha",
+          AppConfiguration.EndpointConfiguration.Version.Type.MAVEN
+        ))
+      )),
+      List.of(MavenHashType.SHA512)
+    );
+
+    new JavadocService(configuration, restClient).refreshAll();
+
+    assertThat(Files.readAllBytes(storage.resolve("paper").resolve("26.1.1.jar"))).isEqualTo(jarBytes);
+
+    server.verify();
   }
 
   @Test
   void refreshAllResolvesChangingReleaseToLatestMatchingBuild() throws Exception {
     final byte[] jarBytes = "jar".getBytes(StandardCharsets.UTF_8);
     final String sha512 = HashAlgorithm.SHA512.hash(jarBytes).toString();
-    final HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-    server.createContext("/io/papermc/paper/paper-api/maven-metadata.xml", exchange -> this.respond(exchange, metadata()));
-    server.createContext("/io/papermc/paper/paper-api/26.1.1.build.28-alpha/paper-api-26.1.1.build.28-alpha-javadoc.jar", exchange -> this.respond(exchange, jarBytes));
-    server.createContext("/io/papermc/paper/paper-api/26.1.1.build.28-alpha/paper-api-26.1.1.build.28-alpha-javadoc.jar.sha512", exchange -> this.respond(exchange, sha512));
-    server.start();
-    try {
-      final Path storage = Files.createTempDirectory("javaducks-release-selector");
-      final AppConfiguration configuration = new AppConfiguration(
-        java.net.URI.create("https://example.com"),
-        java.net.URI.create("https://example.com"),
-        storage,
-        List.of(new AppConfiguration.EndpointConfiguration(
-          "paper",
-          List.of(new AppConfiguration.EndpointConfiguration.Version(
-            "26.1.1",
-            null,
-            java.net.URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/"),
-            "io.papermc.paper",
-            "paper-api",
-            "26.1.1.build.+",
-            AppConfiguration.EndpointConfiguration.Version.Type.MAVEN
-          ))
-        )),
-        List.of(MavenHashType.SHA512)
-      );
 
-      new JavadocService(configuration, RestClient.create()).refreshAll();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-      assertThat(Files.readAllBytes(storage.resolve("paper").resolve("26.1.1.jar"))).isEqualTo(jarBytes);
-    } finally {
-      server.stop(0);
-    }
+    final String metadataUri = "http://repo.test/io/papermc/paper/paper-api/maven-metadata.xml";
+    final String jarUri = "http://repo.test/io/papermc/paper/paper-api/26.1.1.build.28-alpha/paper-api-26.1.1.build.28-alpha-javadoc.jar";
+    final String hashUri = jarUri + ".sha512";
+
+    server.expect(requestTo(metadataUri)).andRespond(withSuccess(metadata(), MediaType.TEXT_PLAIN));
+    server.expect(requestTo(hashUri)).andRespond(withSuccess(sha512, MediaType.TEXT_PLAIN));
+    server.expect(requestTo(jarUri)).andRespond(withSuccess(jarBytes, MediaType.APPLICATION_OCTET_STREAM));
+
+    final Path storage = Files.createTempDirectory("javaducks-release-selector");
+    final AppConfiguration configuration = new AppConfiguration(
+      java.net.URI.create("https://example.com"),
+      java.net.URI.create("https://example.com"),
+      storage,
+      List.of(new AppConfiguration.EndpointConfiguration(
+        "paper",
+        List.of(new AppConfiguration.EndpointConfiguration.Version(
+          "26.1.1",
+          null,
+          java.net.URI.create("http://repo.test/"),
+          "io.papermc.paper",
+          "paper-api",
+          "26.1.1.build.+",
+          AppConfiguration.EndpointConfiguration.Version.Type.MAVEN
+        ))
+      )),
+      List.of(MavenHashType.SHA512)
+    );
+
+    new JavadocService(configuration, restClient).refreshAll();
+
+    assertThat(Files.readAllBytes(storage.resolve("paper").resolve("26.1.1.jar"))).isEqualTo(jarBytes);
+
+    server.verify();
   }
 
   private static String metadata() {
@@ -130,15 +141,5 @@ class JavadocServiceTest {
         </versioning>
       </metadata>
       """;
-  }
-
-  private void respond(final HttpExchange exchange, final String body) throws IOException {
-    this.respond(exchange, body.getBytes(StandardCharsets.UTF_8));
-  }
-
-  private void respond(final HttpExchange exchange, final byte[] body) throws IOException {
-    exchange.sendResponseHeaders(200, body.length);
-    exchange.getResponseBody().write(body);
-    exchange.close();
   }
 }
